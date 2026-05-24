@@ -2,3 +2,12 @@
 
 I have downloaded all Qwen-related files to the following folder: dify-langgraph-qwen-demo/data/models/Qwen2.5-14B-Instruct-AWQ. Please change the configuration parameters to load the files directly from this folder.
 
+
+Launch Sequence (Summary)
+To deploy and test, navigate to dify-langgraph-qwen-demo and execute in this order:
+
+Diagnose host capabilities: bash qwen_server/check_gpu.sh
+Start the model server: bash qwen_server/start_qwen_vllm_docker.sh (or bash qwen_server/start_qwen_vllm.sh)
+Test connectivity: python qwen_server/test_qwen_api.py
+Start the agent server: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+Test integrated agent flow: python scripts/test_agent.py
