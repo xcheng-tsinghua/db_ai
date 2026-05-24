@@ -26,6 +26,14 @@ QWEN_MAX_NUM_SEQS=${QWEN_MAX_NUM_SEQS:-2}
 QWEN_DTYPE=${QWEN_DTYPE:-"auto"}
 QWEN_API_KEY=${QWEN_API_KEY:-"EMPTY"}
 
+# 3. Resolve relative model path to absolute if it exists relative to project root
+if [[ "$QWEN_MODEL_PATH" != /* && "$QWEN_MODEL_PATH" != [a-zA-Z]:* ]]; then
+    if [ -d "$ROOT_DIR/$QWEN_MODEL_PATH" ]; then
+        echo "Resolving relative model path ($QWEN_MODEL_PATH) to absolute path relative to project root..."
+        QWEN_MODEL_PATH="$ROOT_DIR/$QWEN_MODEL_PATH"
+    fi
+fi
+
 # Warning about 32B or larger models on 24GB GPUs
 if [[ "$QWEN_MODEL_PATH" == *"32B"* || "$QWEN_MODEL_PATH" == *"72B"* ]]; then
     echo "========================================= WARNING ========================================="
@@ -36,7 +44,7 @@ if [[ "$QWEN_MODEL_PATH" == *"32B"* || "$QWEN_MODEL_PATH" == *"72B"* ]]; then
     echo "==========================================================================================="
 fi
 
-# 3. Check whether Python and vLLM are available
+# 4. Check whether Python and vLLM are available
 if ! command -v python3 &> /dev/null; then
     echo "Error: Python 3 is not installed or not in PATH."
     exit 1
@@ -49,7 +57,7 @@ if ! python3 -c "import vllm" &> /dev/null; then
     exit 1
 fi
 
-# 4. Print GPU information using nvidia-smi if available
+# 5. Print GPU information using nvidia-smi if available
 if command -v nvidia-smi &> /dev/null; then
     echo "GPU Information detected:"
     nvidia-smi --query-gpu=name,memory.total,memory.free --format=csv
@@ -57,7 +65,7 @@ else
     echo "Warning: nvidia-smi not found. Ensure NVIDIA drivers are installed if running on a GPU."
 fi
 
-# 5. Print the final model serving configuration
+# 6. Print the final model serving configuration
 echo "Starting vLLM OpenAI API Server with configuration:"
 echo "--------------------------------------------------------"
 echo "Model Path:              $QWEN_MODEL_PATH"
@@ -72,7 +80,7 @@ echo "--------------------------------------------------------"
 # Export API key for vLLM authorization
 export VLLM_API_KEY="$QWEN_API_KEY"
 
-# 6. Start vLLM OpenAI-compatible server
+# 7. Start vLLM OpenAI-compatible server
 exec vllm serve "$QWEN_MODEL_PATH" \
   --host "$QWEN_HOST" \
   --port "$QWEN_PORT" \

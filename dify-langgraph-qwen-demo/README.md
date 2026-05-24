@@ -51,10 +51,10 @@ Before starting the FastAPI backend, you must host your Qwen model. Make sure it
 ### Options to Serve Qwen locally (RTX 4090 24GB recommended)
 
 #### Option A: vLLM (Recommended for performance)
-Run vLLM to serve `Qwen2.5-14B-Instruct-AWQ` (fits comfortably on a single RTX 4090):
+Run vLLM to serve the local `Qwen2.5-14B-Instruct-AWQ` model weights:
 ```bash
 python -m vllm.entrypoints.openai.api_server \
-    --model Qwen/Qwen2.5-14B-Instruct-AWQ \
+    --model data/models/Qwen2.5-14B-Instruct-AWQ \
     --port 8001 \
     --served-model-name qwen14b \
     --gpu-memory-utilization 0.90 \

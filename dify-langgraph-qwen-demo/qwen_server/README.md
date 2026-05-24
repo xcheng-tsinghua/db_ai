@@ -10,6 +10,7 @@ For a single **NVIDIA RTX 4090 (24GB VRAM)** GPU:
 * **Recommended Model**: `Qwen/Qwen2.5-14B-Instruct-AWQ`
 * **Why**: The AWQ (Activation-aware Weight Quantization) 4-bit quantized version of the Qwen2.5-14B model fits comfortably inside ~10GB of VRAM. This leaves ample memory for large context windows (KV cache) and batch sizes, ensuring extremely high serving throughput and stability.
 * **Caution on 32B/72B models**: Running 32B or 72B models on a 24GB VRAM card typically causes Out-Of-Memory (OOM) exceptions during multi-turn or concurrent queries unless context length is restricted heavily.
+* **Local Offline Serving**: To load model weights locally (e.g. without an internet connection or Hugging Face access), place the files in the directory `data/models/Qwen2.5-14B-Instruct-AWQ` relative to the project root. Both the native startup script (`start_qwen_vllm.sh`) and the Docker-based script (`start_qwen_vllm_docker.sh`) automatically detect local folders, resolve their paths, and mount them into the container environment.
 
 ---
 
@@ -63,7 +64,7 @@ The FastAPI backend looks up model server connection details in the root `.env` 
 
 ```env
 # Qwen Server Deployment Configuration
-QWEN_MODEL_PATH=Qwen/Qwen2.5-14B-Instruct-AWQ
+QWEN_MODEL_PATH=data/models/Qwen2.5-14B-Instruct-AWQ
 QWEN_SERVED_MODEL_NAME=qwen14b
 QWEN_HOST=0.0.0.0
 QWEN_PORT=8001

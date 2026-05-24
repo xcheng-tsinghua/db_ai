@@ -34,12 +34,16 @@ services:
 #    env_file:
 #      - .env
 #    volumes:
+#      # Option A: Online loading (download from Hugging Face)
 #      - ~/.cache/huggingface:/root/.cache/huggingface
+#      # Option B: Offline loading (load from local model directory)
+#      # - ./data/models/Qwen2.5-14B-Instruct-AWQ:/model
 #    ipc: host
 #    environment:
 #      - VLLM_API_KEY=${QWEN_API_KEY:-EMPTY}
 #    command: >
 #      --model ${QWEN_MODEL_PATH:-Qwen/Qwen2.5-14B-Instruct-AWQ}
+#      # Note: If using Option B (local folder), change '--model ...' above to '--model /model'
 #      --served-model-name ${QWEN_SERVED_MODEL_NAME:-qwen14b}
 #      --host ${QWEN_HOST:-0.0.0.0}
 #      --port ${QWEN_PORT:-8001}

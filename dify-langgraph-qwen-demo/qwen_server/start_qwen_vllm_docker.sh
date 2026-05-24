@@ -58,9 +58,37 @@ fi
 # Ensure HF Cache directory exists locally
 mkdir -p ~/.cache/huggingface
 
+# 5. Resolve relative model path to absolute and set up Docker volume mounts
+DOCKER_VOLUME_MOUNTS=()
+DOCKER_VOLUME_MOUNTS+=("-v" "$HOME/.cache/huggingface:/root/.cache/huggingface")
+
+RESOLVED_MODEL_PATH="$QWEN_MODEL_PATH"
+IS_LOCAL_MODEL=false
+
+if [[ "$QWEN_MODEL_PATH" != /* && "$QWEN_MODEL_PATH" != [a-zA-Z]:* ]]; then
+    if [ -d "$ROOT_DIR/$QWEN_MODEL_PATH" ]; then
+        RESOLVED_MODEL_PATH="$ROOT_DIR/$QWEN_MODEL_PATH"
+        IS_LOCAL_MODEL=true
+    fi
+elif [ -d "$QWEN_MODEL_PATH" ]; then
+    IS_LOCAL_MODEL=true
+fi
+
+if [ "$IS_LOCAL_MODEL" = true ]; then
+    echo "Local model directory detected: $RESOLVED_MODEL_PATH"
+    echo "Mounting local path to /model inside the container."
+    DOCKER_VOLUME_MOUNTS+=("-v" "$RESOLVED_MODEL_PATH:/model")
+    CONTAINER_MODEL_PATH="/model"
+else
+    CONTAINER_MODEL_PATH="$QWEN_MODEL_PATH"
+fi
+
 echo "Starting vLLM Docker Container with configuration:"
 echo "--------------------------------------------------------"
-echo "Model Path:              $QWEN_MODEL_PATH"
+echo "Model Path (Host):       $QWEN_MODEL_PATH"
+if [ "$IS_LOCAL_MODEL" = true ]; then
+echo "Model Path (Container):  $CONTAINER_MODEL_PATH (mounted from $RESOLVED_MODEL_PATH)"
+fi
 echo "Served Model Name:       $QWEN_SERVED_MODEL_NAME"
 echo "Host & Port (exposing):  $QWEN_HOST:$QWEN_PORT"
 echo "Max Model Len:           $QWEN_MAX_MODEL_LEN"
@@ -75,12 +103,12 @@ echo "--------------------------------------------------------"
 docker run --rm \
   --runtime nvidia \
   --gpus all \
-  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  "${DOCKER_VOLUME_MOUNTS[@]}" \
   -p ${QWEN_PORT}:${QWEN_PORT} \
   --ipc=host \
   -e VLLM_API_KEY="$QWEN_API_KEY" \
   vllm/vllm-openai:latest \
-  --model "$QWEN_MODEL_PATH" \
+  --model "$CONTAINER_MODEL_PATH" \
   --served-model-name "$QWEN_SERVED_MODEL_NAME" \
   --host "$QWEN_HOST" \
   --port "$QWEN_PORT" \
