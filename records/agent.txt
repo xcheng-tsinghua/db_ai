@@ -1,0 +1,4 @@
+我已经将Qwen相关文件全部下载到如下文件夹 dify-langgraph-qwen-demo/data/models/Qwen2.5-14B-Instruct-AWQ，更改配置参数，直接从该文件夹加载文件
+
+I have downloaded all Qwen-related files to the following folder: dify-langgraph-qwen-demo/data/models/Qwen2.5-14B-Instruct-AWQ. Please change the configuration parameters to load the files directly from this folder.
+
