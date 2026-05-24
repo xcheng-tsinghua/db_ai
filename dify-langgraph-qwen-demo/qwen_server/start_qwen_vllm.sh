@@ -7,6 +7,8 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+echo "ROOT_DIR:   $ROOT_DIR"
+
 # 1. Load variables from .env if it exists
 if [ -f "$ROOT_DIR/.env" ]; then
     echo "Loading configurations from $ROOT_DIR/.env"
