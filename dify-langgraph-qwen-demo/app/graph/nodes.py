@@ -5,6 +5,20 @@ from app.prompts.router_prompt import ROUTER_SYSTEM_PROMPT
 from app.prompts.analysis_prompt import ANALYSIS_SYSTEM_PROMPT_MAP
 from app.prompts.writer_prompt import WRITER_SYSTEM_PROMPT
 
+def _get_llm_kwargs(state: AgentState) -> dict:
+    kwargs = {}
+    if "llm_base_url" in state and state["llm_base_url"] is not None:
+        kwargs["base_url"] = state["llm_base_url"]
+    if "llm_model" in state and state["llm_model"] is not None:
+        kwargs["model"] = state["llm_model"]
+    if "llm_api_key" in state and state["llm_api_key"] is not None:
+        kwargs["api_key"] = state["llm_api_key"]
+    if "llm_temperature" in state and state["llm_temperature"] is not None:
+        kwargs["temperature"] = state["llm_temperature"]
+    if "llm_max_tokens" in state and state["llm_max_tokens"] is not None:
+        kwargs["max_tokens"] = state["llm_max_tokens"]
+    return kwargs
+
 def router_node(state: AgentState) -> Dict[str, Any]:
     query = state.get("query", "")
     
@@ -13,7 +27,7 @@ def router_node(state: AgentState) -> Dict[str, Any]:
         {"role": "user", "content": query}
     ]
     
-    output = qwen_client.chat_completion(messages)
+    output = qwen_client.chat_completion(messages, **_get_llm_kwargs(state))
     
     # Post-process router output
     cleaned_output = output.strip().lower()
@@ -51,7 +65,7 @@ def analysis_node(state: AgentState) -> Dict[str, Any]:
         {"role": "user", "content": query}
     ]
     
-    output = qwen_client.chat_completion(messages)
+    output = qwen_client.chat_completion(messages, **_get_llm_kwargs(state))
     
     # Conditional logic: flag quality_analysis for human review in this MVP
     need_human_review = False
@@ -86,7 +100,7 @@ def writer_node(state: AgentState) -> Dict[str, Any]:
         {"role": "user", "content": user_content}
     ]
     
-    output = qwen_client.chat_completion(messages)
+    output = qwen_client.chat_completion(messages, **_get_llm_kwargs(state))
     
     trace = {
         "agent": "writer",

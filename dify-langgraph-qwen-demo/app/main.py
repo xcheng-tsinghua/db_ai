@@ -41,6 +41,27 @@ def health_check():
 async def invoke_agent(request: AgentRequest):
     logger.info(f"Received request from user={request.user_id} with query='{request.query[:100]}...'")
     
+    # Extract optional dynamic LLM config overrides from context
+    context = request.context or {}
+    llm_base_url = context.get("llm_base_url")
+    llm_model = context.get("llm_model")
+    llm_api_key = context.get("llm_api_key")
+    llm_temperature = context.get("llm_temperature")
+    llm_max_tokens = context.get("llm_max_tokens")
+    
+    # Mask API key in debug logs
+    masked_key = "None"
+    if llm_api_key:
+        if llm_api_key == "EMPTY":
+            masked_key = "EMPTY"
+        else:
+            masked_key = llm_api_key[:4] + "..." if len(llm_api_key) > 4 else "..."
+            
+    logger.info(
+        f"Dynamic LLM override detected: base_url={llm_base_url}, model={llm_model}, key={masked_key}, "
+        f"temp={llm_temperature}, max_tokens={llm_max_tokens}"
+    )
+    
     # Initialize state
     initial_state = {
         "query": request.query,
@@ -51,7 +72,12 @@ async def invoke_agent(request: AgentRequest):
         "analysis_output": "",
         "final_answer": "",
         "agent_trace": [],
-        "need_human_review": False
+        "need_human_review": False,
+        "llm_base_url": llm_base_url,
+        "llm_model": llm_model,
+        "llm_api_key": llm_api_key,
+        "llm_temperature": llm_temperature,
+        "llm_max_tokens": llm_max_tokens
     }
     
     try:

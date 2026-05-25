@@ -10,3 +10,8 @@ class AgentState(TypedDict):
     final_answer: str
     agent_trace: List[Dict[str, str]]
     need_human_review: bool
+    llm_base_url: str
+    llm_model: str
+    llm_api_key: str
+    llm_temperature: float
+    llm_max_tokens: int

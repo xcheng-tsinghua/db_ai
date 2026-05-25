@@ -149,24 +149,16 @@ To test using a visual web interface:
 
 ## 3. Configuration
 
+### Environment Variables
 1. Copy the example environment file:
    ```bash
    cp .env.example .env
    ```
-2. Open `.env` and adjust the variables based on your setup:
-   ```env
-   # Server Configuration
-   HOST=0.0.0.0
-   PORT=8000
-   DEBUG=true
+2. Open `.env` and adjust the variables based on your setup. The default settings target Option C (direct Transformers execution of `Qwen2.5-7B-Instruct`).
 
-   # Qwen OpenAI-compatible API Configurations
-   QWEN_BASE_URL=http://localhost:8001/v1
-   QWEN_API_KEY=EMPTY
-   QWEN_MODEL=qwen14b
-   QWEN_TEMPERATURE=0.2
-   QWEN_MAX_TOKENS=2048
-   ```
+### Dynamic Model Provider Selection (Request Context)
+The FastAPI backend supports per-request model provider overrides via the `context` dictionary block in requests to `POST /agent/invoke`.
+If context parameters (`llm_base_url`, `llm_model`, `llm_api_key`, `llm_temperature`, `llm_max_tokens`) are sent, they override the server environment defaults for that request transaction only. This is highly useful for benchmarking the graph with external services like OpenAI (`gpt-4o-mini`), DeepSeek (`deepseek-chat`), or DashScope (`qwen-plus`). See [web_ui/README.md](file:///e:/document/DeepLearning/db_ai/dify-langgraph-qwen-demo/web_ui/README.md) for JSON override schemas and examples.
 
 ---
 

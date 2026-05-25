@@ -62,7 +62,37 @@ All traffic to port `8501` on your laptop will be securely tunneled over SSH to 
 
 ---
 
-## 4. Security Warning
+## 4. Model Provider Selection & Examples
+
+The Web UI features a sidebar panel called **"Model Provider Override"** allowing you to dynamically route queries through either the local model or custom external APIs.
+
+### Option 1: Local Qwen
+This is the default option. No API key is required.
+* **Base URL**: `http://127.0.0.1:8001/v1`
+* **Model Name**: `qwen7b`
+
+### Option 2: Custom OpenAI-compatible API
+When selected, enter your target API configurations:
+1. **OpenAI API**:
+   * **API Base URL**: `https://api.openai.com/v1`
+   * **Model Name**: `gpt-4o-mini`
+   * **API Key**: `sk-...` (Input is protected via password text field)
+2. **DeepSeek API**:
+   * **API Base URL**: `https://api.deepseek.com/v1`
+   * **Model Name**: `deepseek-chat`
+   * **API Key**: `sk-...`
+3. **DashScope/Qwen API**:
+   * **API Base URL**: `https://dashscope.aliyuncs.com/compatible-mode/v1`
+   * **Model Name**: `qwen-plus`
+   * **API Key**: `sk-...`
+
+Click **"Test Selected Model Connection"** in the sidebar to verify your custom LLM configurations.
+
+---
+
+## 5. Security & Key Handling Guidelines
 
 > [!WARNING]
-> This Web UI is intended solely for development testing and MVP validation. It lacks authentication and rate-limiting. **Do not expose port 8501 publicly in production environments.**
+> - **In-Memory Lifespan Only**: All custom API credentials inputted into the Web UI are sent as transient request-level context to the backend. They exist solely in-memory on the backend for the duration of that specific API transaction and are never logged, cached, or written to disk.
+> - **PoC/Local Environment Only**: This UI has no native authentication. Do not expose port 8501 publicly to the web.
+> - **Production Note**: For production systems, credentials should be retrieved from a secure server-side encrypted vault rather than entered directly via client-side browsers.
