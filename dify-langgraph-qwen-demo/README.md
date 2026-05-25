@@ -132,6 +132,18 @@ Query the FastAPI backend to trigger the multi-agent reasoning graph:
 python scripts/test_agent.py
 ```
 
+#### Step 6: Test with Web UI (Optional / Interactive)
+To test using a visual web interface:
+1. Start the Web UI:
+   ```bash
+   bash web_ui/start_web_ui.sh
+   ```
+2. Open your laptop browser and navigate to:
+   ```
+   http://<SERVER_IP>:8501
+   ```
+   *(For secure access or if port 8501 is closed, use SSH port-forwarding: `ssh -L 8501:127.0.0.1:8501 user@<SERVER_IP>` and open `http://127.0.0.1:8501`)*.
+
 ---
 
 
