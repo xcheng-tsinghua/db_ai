@@ -196,7 +196,7 @@ st.sidebar.markdown("### 🤖 Model Provider Override")
 
 llm_provider = st.sidebar.radio(
     "Select Provider",
-    options=["Local Qwen", "Custom OpenAI-compatible API"],
+    options=["Local Qwen", "MiniMax API", "Custom OpenAI-compatible API"],
     index=0
 )
 
@@ -213,13 +213,29 @@ if llm_provider == "Local Qwen":
     
     temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.5, value=0.2, step=0.1)
     max_tokens = st.sidebar.number_input("Max Output Tokens", min_value=1, max_value=8192, value=2048)
-else:
+elif llm_provider == "MiniMax API":
     st.sidebar.warning(
-        "⚠️ Custom API keys are held in-memory for this query request only. "
+        "⚠️ MiniMax API credentials are sent in-memory for this request only. "
         "Do not expose this Web UI publicly without authentication."
     )
-    llm_base_url = st.sidebar.text_input("API Base URL Override", value="https://api.openai.com/v1", placeholder="https://api.openai.com/v1")
-    llm_model = st.sidebar.text_input("Model Name Override", value="gpt-4o-mini", placeholder="gpt-4o-mini")
+    llm_base_url = st.sidebar.text_input("API Base URL Override", value="https://api.minimax.chat/v1")
+    llm_model = st.sidebar.text_input("Model Name Override", value="MiniMax-M1")
+    llm_api_key = st.sidebar.text_input("API Key (Password Field)", type="password", placeholder="Paste MiniMax API key here")
+    temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.5, value=0.2, step=0.1)
+    max_tokens = st.sidebar.number_input("Max Output Tokens", min_value=1, max_value=8192, value=2048)
+    
+    masked_key = llm_api_key[:4] + "..." if len(llm_api_key) > 4 else "..." if llm_api_key else "None"
+    st.sidebar.markdown("**Provider**: `MiniMax API`")
+    st.sidebar.markdown(f"**Base URL**: `{llm_base_url}`")
+    st.sidebar.markdown(f"**Model**: `{llm_model}`")
+    st.sidebar.markdown(f"**API Key**: `{masked_key}`")
+else:
+    st.sidebar.warning(
+        "⚠️ Custom API credentials are sent in-memory for this request only. "
+        "Do not expose this Web UI publicly without authentication."
+    )
+    llm_base_url = st.sidebar.text_input("API Base URL Override", value="https://api.openai.com/v1")
+    llm_model = st.sidebar.text_input("Model Name Override", value="gpt-4o-mini")
     llm_api_key = st.sidebar.text_input("API Key (Password Field)", type="password", placeholder="sk-...")
     temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.5, value=0.2, step=0.1)
     max_tokens = st.sidebar.number_input("Max Output Tokens", min_value=1, max_value=8192, value=2048)
@@ -232,15 +248,15 @@ else:
 
 # Test Selected Model Button
 if st.sidebar.button("🔌 Test Selected Model Connection", use_container_width=True):
-    if llm_provider == "Custom OpenAI-compatible API" and not llm_api_key:
-        st.sidebar.error("Error: Please enter an API key for the custom provider.")
+    if llm_provider in ["MiniMax API", "Custom OpenAI-compatible API"] and not llm_api_key:
+        st.sidebar.error("Error: Please enter an API key for the selected provider.")
     else:
         with st.sidebar.spinner("Testing model connection (sending query)..."):
             test_payload = {
                 "query": "Reply with only 'OK'.",
                 "user_id": "connection_test",
                 "context": {
-                    "llm_provider": "local_qwen" if llm_provider == "Local Qwen" else "custom_openai",
+                    "llm_provider": "local_qwen" if llm_provider == "Local Qwen" else "minimax" if llm_provider == "MiniMax API" else "custom_openai",
                     "llm_base_url": llm_base_url,
                     "llm_model": llm_model,
                     "llm_api_key": llm_api_key,
@@ -323,6 +339,9 @@ if submit_btn:
     if not query.strip():
         with col_output:
             st.warning("Please enter a query prompt before submitting.")
+    elif llm_provider in ["MiniMax API", "Custom OpenAI-compatible API"] and not llm_api_key:
+        with col_output:
+            st.error("Error: Please enter an API key in the sidebar configuration to call the external LLM provider.")
     else:
         with col_output:
             # Spinner loader
@@ -331,7 +350,7 @@ if submit_btn:
                     "query": query,
                     "user_id": user_id,
                     "context": {
-                        "llm_provider": "local_qwen" if llm_provider == "Local Qwen" else "custom_openai",
+                        "llm_provider": "local_qwen" if llm_provider == "Local Qwen" else "minimax" if llm_provider == "MiniMax API" else "custom_openai",
                         "llm_base_url": llm_base_url,
                         "llm_model": llm_model,
                         "llm_api_key": llm_api_key,

@@ -67,12 +67,18 @@ All traffic to port `8501` on your laptop will be securely tunneled over SSH to 
 The Web UI features a sidebar panel called **"Model Provider Override"** allowing you to dynamically route queries through either the local model or custom external APIs.
 
 ### Option 1: Local Qwen
-This is the default option. No API key is required.
+This is the default local option. No API key is required.
 * **Base URL**: `http://127.0.0.1:8001/v1`
 * **Model Name**: `qwen7b`
 
-### Option 2: Custom OpenAI-compatible API
-When selected, enter your target API configurations:
+### Option 2: MiniMax API (Default External Provider)
+This is the default option for external API calls.
+* **Base URL**: `https://api.minimax.chat/v1`
+* **Model Name**: `MiniMax-M1`
+* **API Key**: Enter your MiniMax API key in the password field.
+
+### Option 3: Custom OpenAI-compatible API
+Use this for other external providers:
 1. **OpenAI API**:
    * **API Base URL**: `https://api.openai.com/v1`
    * **Model Name**: `gpt-4o-mini`
@@ -86,7 +92,7 @@ When selected, enter your target API configurations:
    * **Model Name**: `qwen-plus`
    * **API Key**: `sk-...`
 
-Click **"Test Selected Model Connection"** in the sidebar to verify your custom LLM configurations.
+Click **"Test Selected Model Connection"** in the sidebar to verify your configurations.
 
 ---
 
