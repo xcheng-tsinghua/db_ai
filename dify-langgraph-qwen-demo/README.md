@@ -50,7 +50,15 @@ Before starting the FastAPI backend, you must host your Qwen model. Make sure it
 
 ### Options to Serve Qwen locally (RTX 4090 24GB recommended)
 
-#### Option A: vLLM (Recommended for performance)
+#### Option A: Transformers direct loading (Recommended Fallback / Stable)
+For environments where vLLM causes driver or torch mismatches, you can serve `Qwen2.5-7B-Instruct` directly via PyTorch/Transformers on port `8001`.
+See [qwen_server_transformers/README.md](file:///e:/document/DeepLearning/db_ai/dify-langgraph-qwen-demo/qwen_server_transformers/README.md) for detailed configuration.
+To run:
+```bash
+bash qwen_server_transformers/start_qwen_transformers.sh
+```
+
+#### Option B: vLLM (Recommended for performance)
 Run vLLM to serve the local `Qwen2.5-14B-Instruct-AWQ` model weights:
 ```bash
 python -m vllm.entrypoints.openai.api_server \
@@ -61,7 +69,7 @@ python -m vllm.entrypoints.openai.api_server \
     --max-model-len 4096
 ```
 
-#### Option B: Ollama (Recommended for simplicity)
+#### Option C: Ollama (Recommended for simplicity)
 Download and start Ollama, then run the model:
 ```bash
 ollama run qwen2.5:14b
@@ -88,20 +96,29 @@ bash qwen_server/check_gpu.sh
 #### Step 2: Start the Qwen Model Server
 Choose **one** of the following options depending on your environment preference:
 
-* **Option A (Local Python / vLLM)**:
+* **Option A (Local Python / Transformers Fallback - Recommended for compatibility)**:
+  ```bash
+  bash qwen_server_transformers/start_qwen_transformers.sh
+  ```
+* **Option B (Local Python / vLLM)**:
   ```bash
   bash qwen_server/start_qwen_vllm.sh
   ```
-* **Option B (Docker / vLLM Container)**:
+* **Option C (Docker / vLLM Container)**:
   ```bash
   bash qwen_server/start_qwen_vllm_docker.sh
   ```
 
 #### Step 3: Test Qwen API Connectivity
 Verify that Qwen is correctly serving an OpenAI-compatible chat completion endpoint:
-```bash
-python qwen_server/test_qwen_api.py
-```
+* For **Transformers Fallback (Option A)**:
+  ```bash
+  python qwen_server_transformers/test_transformers_qwen_api.py
+  ```
+* For **vLLM (Option B or C)**:
+  ```bash
+  python qwen_server/test_qwen_api.py
+  ```
 
 #### Step 4: Start the FastAPI LangGraph Backend
 Start the agent application server (runs on port `8000` by default):
