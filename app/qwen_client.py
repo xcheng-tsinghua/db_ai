@@ -6,11 +6,16 @@ logger = logging.getLogger(__name__)
 
 class QwenClient:
     def __init__(self):
-        self.client = OpenAI(
-            base_url=settings.QWEN_BASE_URL,
-            api_key=settings.QWEN_API_KEY
-        )
+        self._default_client = None
         self.model = settings.QWEN_MODEL
+
+    def _get_default_client(self):
+        if self._default_client is None:
+            self._default_client = OpenAI(
+                base_url=settings.QWEN_BASE_URL,
+                api_key=settings.QWEN_API_KEY
+            )
+        return self._default_client
 
     def chat_completion(
         self, 
@@ -47,7 +52,7 @@ class QwenClient:
                     api_key=target_api_key
                 )
             else:
-                client = self.client
+                client = self._get_default_client()
                 
             response = client.chat.completions.create(
                 model=target_model,
@@ -59,19 +64,16 @@ class QwenClient:
                 content = response.choices[0].message.content
                 if content:
                     return content.strip()
-            return "Error: Received empty response from model endpoint."
+            raise RuntimeError("Error: Received empty response from model endpoint.")
         except APIConnectionError as e:
-            err_msg = f"Error: Cannot connect to model server at {target_base_url}. Details: {e}"
-            logger.error(err_msg)
-            return err_msg
+            logger.error(f"Cannot connect to model server at {target_base_url}: {e}")
+            raise e
         except APIError as e:
-            err_msg = f"Error: Model endpoint returned API Error. Code: {e.code}, Message: {e.message}"
-            logger.error(err_msg)
-            return err_msg
+            logger.error(f"Model endpoint returned API Error. Code: {e.code}, Message: {e.message}")
+            raise e
         except Exception as e:
-            err_msg = f"Error: Unexpected exception when calling model endpoint. Details: {str(e)}"
-            logger.error(err_msg)
-            return err_msg
+            logger.error(f"Unexpected exception when calling model endpoint: {str(e)}")
+            raise e
 
 # Singleton instance
 qwen_client = QwenClient()

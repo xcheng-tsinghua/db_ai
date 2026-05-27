@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     QWEN_TEMPERATURE: float = 0.2
     QWEN_MAX_TOKENS: int = 2048
 
+    # Default LLM Provider Settings
+    DEFAULT_LLM_PROVIDER: str = "local_qwen"
+
     # Windows Agent Worker Configuration
     WINDOWS_WORKER_BASE_URL: str = "http://127.0.0.1:9100"
     ENABLE_WINDOWS_WORKER: bool = False

@@ -15,18 +15,19 @@ pip install -r web_ui/requirements_web.txt
 
 ## 2. Launch Sequence
 
-To test the entire system, start the services in the following order:
+The FastAPI backend and local Qwen model server are completely decoupled. You can start the FastAPI backend server first (even if the Qwen model server is down or you do not plan to use it):
 
-### Step 1: Start Qwen Model Server
-Run the local direct Transformers server:
-```bash
-bash qwen_server_transformers/start_qwen_transformers.sh
-```
-
-### Step 2: Start FastAPI LangGraph Backend
+### Step 1: Start FastAPI LangGraph Backend (Required)
 Start the main application server:
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+*(The backend will start successfully regardless of whether Qwen is running or if API credentials are set).*
+
+### Step 2: Start Qwen Model Server (Optional)
+If you wish to use the Local Qwen model provider, run the local direct Transformers server:
+```bash
+bash qwen_server_transformers/start_qwen_transformers.sh
 ```
 
 ### Step 3: Start Streamlit Web UI

@@ -85,49 +85,34 @@ A dedicated deployment module for the self-hosted Qwen model is available in the
 
 ### Expected Execution Sequence
 
-To deploy and test the entire system, execute commands in the following order:
+The FastAPI backend and local Qwen model server are completely decoupled. The backend can run independently from Qwen (allowing you to use MiniMax or custom external APIs without launching Qwen).
 
-#### Step 1: Run Environment Diagnostics
-Verify GPU drivers, memory, disk space, and Docker GPU compatibility:
-```bash
-bash qwen_server/check_gpu.sh
-```
-
-#### Step 2: Start the Qwen Model Server
-Choose **one** of the following options depending on your environment preference:
-
-* **Option A (Local Python / Transformers Fallback - Recommended for compatibility)**:
-  ```bash
-  bash qwen_server_transformers/start_qwen_transformers.sh
-  ```
-* **Option B (Local Python / vLLM)**:
-  ```bash
-  bash qwen_server/start_qwen_vllm.sh
-  ```
-* **Option C (Docker / vLLM Container)**:
-  ```bash
-  bash qwen_server/start_qwen_vllm_docker.sh
-  ```
-
-#### Step 3: Test Qwen API Connectivity
-Verify that Qwen is correctly serving an OpenAI-compatible chat completion endpoint:
-* For **Transformers Fallback (Option A)**:
-  ```bash
-  python qwen_server_transformers/test_transformers_qwen_api.py
-  ```
-* For **vLLM (Option B or C)**:
-  ```bash
-  python qwen_server/test_qwen_api.py
-  ```
-
-#### Step 4: Start the FastAPI LangGraph Backend
+#### Step 1: Start the FastAPI LangGraph Backend (Required)
 Start the agent application server (runs on port `8000` by default):
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+*(The backend will start successfully regardless of whether Qwen is running or if API credentials are set).*
 
-#### Step 5: Test the Integrated /agent/invoke Flow
-Query the FastAPI backend to trigger the multi-agent reasoning graph:
+#### Step 2: Start the Qwen Model Server (Optional)
+If you wish to use the **Local Qwen** option, run environment diagnostics and start the model server:
+```bash
+# Verify GPU capability
+bash qwen_server/check_gpu.sh
+
+# Option A: Start Transformers Fallback server (Recommended / Active default)
+bash qwen_server_transformers/start_qwen_transformers.sh
+```
+*(Other serving options are detailed in the `qwen_server/` folder).*
+
+#### Step 3: Test Qwen API Connectivity (Optional)
+If you started the Qwen model server, verify it is reachable:
+```bash
+python qwen_server_transformers/test_transformers_qwen_api.py
+```
+
+#### Step 4: Test the Integrated /agent/invoke Flow
+Query the FastAPI backend to trigger the multi-agent reasoning graph. (Requires configured provider to be online):
 ```bash
 python scripts/test_agent.py
 ```

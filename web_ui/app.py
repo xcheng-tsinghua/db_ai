@@ -251,27 +251,34 @@ if st.sidebar.button("🔌 Test Selected Model Connection", use_container_width=
     if llm_provider in ["MiniMax API", "Custom OpenAI-compatible API"] and not llm_api_key:
         st.sidebar.error("Error: Please enter an API key for the selected provider.")
     else:
-        with st.sidebar.spinner("Testing model connection (sending query)..."):
+        with st.sidebar.spinner("Testing model connection..."):
+            test_url = backend_url.replace("/agent/invoke", "/llm/test")
+            provider_key = "local_qwen" if llm_provider == "Local Qwen" else "minimax" if llm_provider == "MiniMax API" else "custom_openai"
             test_payload = {
-                "query": "Reply with only 'OK'.",
-                "user_id": "connection_test",
-                "context": {
-                    "llm_provider": "local_qwen" if llm_provider == "Local Qwen" else "minimax" if llm_provider == "MiniMax API" else "custom_openai",
-                    "llm_base_url": llm_base_url,
-                    "llm_model": llm_model,
-                    "llm_api_key": llm_api_key,
-                    "llm_temperature": 0.2,
-                    "llm_max_tokens": 10
-                }
+                "llm_provider": provider_key,
+                "llm_base_url": llm_base_url,
+                "llm_model": llm_model,
+                "llm_api_key": llm_api_key if llm_api_key else "EMPTY"
             }
             try:
-                test_res = requests.post(backend_url, json=test_payload, timeout=20)
+                test_res = requests.post(test_url, json=test_payload, timeout=10)
                 if test_res.status_code == 200:
-                    st.sidebar.success("Connection Successful!")
+                    res_json = test_res.json()
+                    if res_json.get("success"):
+                        st.sidebar.success("Connection Successful!")
+                    else:
+                        err_text = res_json.get("error", "Unknown error")
+                        st.sidebar.error(f"Failed: {err_text}")
+                        if provider_key == "local_qwen":
+                            st.sidebar.warning("⚠️ Local Qwen is not running. You can still choose MiniMax or another API.")
                 else:
                     st.sidebar.error(f"Failed (Status {test_res.status_code}): {test_res.text}")
+                    if provider_key == "local_qwen":
+                        st.sidebar.warning("⚠️ Local Qwen is not running. You can still choose MiniMax or another API.")
             except Exception as e:
                 st.sidebar.error(f"Connection Error: {e}")
+                if provider_key == "local_qwen":
+                    st.sidebar.warning("⚠️ Local Qwen is not running. You can still choose MiniMax or another API.")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📋 System Status")
@@ -287,8 +294,9 @@ try:
     if health_response.status_code == 200:
         data = health_response.json()
         st.sidebar.markdown("**Backend Health**: ✅ `ONLINE`")
-        st.sidebar.markdown(f"**Served LLM**: `{data.get('model_configured', 'unknown')}`")
-        st.sidebar.markdown(f"**API Base URL**: `{data.get('base_url', 'unknown')}`")
+        if "model_configured" in data:
+            st.sidebar.markdown(f"**Served LLM**: `{data.get('model_configured', 'unknown')}`")
+            st.sidebar.markdown(f"**API Base URL**: `{data.get('base_url', 'unknown')}`")
     else:
         st.sidebar.markdown(f"**Backend Health**: ⚠️ `STATUS {health_response.status_code}`")
 except Exception:
@@ -462,6 +470,7 @@ if submit_btn:
                     
                     if response.status_code == 200:
                         res_data = response.json()
+                        error_msg = res_data.get("error")
                         answer = res_data.get("answer", "")
                         task_type = res_data.get("task_type", "unknown")
                         need_review = res_data.get("need_human_review", False)
@@ -479,8 +488,10 @@ if submit_btn:
                         # 1. Final Answer Card
                         st.markdown('<div class="card-header">📊 Final Diagnostic Report</div>', unsafe_allow_html=True)
                         
-                        # Use success/warning alert panels for high contrast markdown rendering
-                        if need_review:
+                        # Use success/warning/error alert panels for contrast rendering
+                        if error_msg:
+                            st.error(error_msg)
+                        elif need_review:
                             st.warning(answer)
                         else:
                             st.success(answer)
@@ -504,6 +515,12 @@ if submit_btn:
                         with st.expander("Show Raw JSON API Response"):
                             st.json(res_data)
                             
+                    elif response.status_code == 400:
+                        try:
+                            err_data = response.json()
+                            st.error(err_data.get("error", "Bad Request"))
+                        except Exception:
+                            st.error(f"Backend API Error (Status 400): {response.text}")
                     else:
                         st.error(f"Backend API Error (Status {response.status_code}): {response.text}")
                         

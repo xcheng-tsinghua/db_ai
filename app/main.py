@@ -1,8 +1,9 @@
 import logging
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.schemas import AgentRequest, AgentResponse, AgentTraceItem
+from app.schemas import AgentRequest, AgentResponse, AgentTraceItem, LLMTestRequest
 from app.graph.workflow import agent_workflow
 from app.tools.windows_worker_client import worker_client
 
@@ -33,10 +34,74 @@ app.add_middleware(
 @app.get("/health")
 def health_check():
     return {
-        "status": "healthy", 
-        "model_configured": settings.QWEN_MODEL,
-        "base_url": settings.QWEN_BASE_URL
+        "status": "ok",
+        "service": "agent-server"
     }
+
+@app.get("/health/llm")
+async def check_default_llm_health():
+    # Resolve default LLM parameters from settings
+    base_url = settings.QWEN_BASE_URL
+    model = settings.QWEN_MODEL
+    api_key = settings.QWEN_API_KEY
+    provider = settings.DEFAULT_LLM_PROVIDER
+    
+    try:
+        from openai import OpenAI
+        client = OpenAI(
+            base_url=base_url,
+            api_key=api_key
+        )
+        # Lightweight check
+        client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": "ping"}],
+            max_tokens=5,
+            timeout=5.0
+        )
+        return {
+            "status": "healthy",
+            "provider": provider,
+            "base_url": base_url,
+            "model": model
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "provider": provider,
+            "base_url": base_url,
+            "model": model,
+            "error": str(e)
+        }
+
+@app.post("/llm/test")
+async def test_llm_connection(req: LLMTestRequest):
+    # Mask key in logging
+    masked_key = "None"
+    if req.llm_api_key:
+        if req.llm_api_key == "EMPTY":
+            masked_key = "EMPTY"
+        else:
+            masked_key = req.llm_api_key[:4] + "..." if len(req.llm_api_key) > 4 else "..."
+            
+    logger.info(f"Testing LLM connection: provider={req.llm_provider}, base_url={req.llm_base_url}, model={req.llm_model}, key={masked_key}")
+    
+    try:
+        from openai import OpenAI
+        client = OpenAI(
+            base_url=req.llm_base_url,
+            api_key=req.llm_api_key
+        )
+        client.chat.completions.create(
+            model=req.llm_model,
+            messages=[{"role": "user", "content": "ping"}],
+            max_tokens=5,
+            timeout=5.0
+        )
+        return {"success": True, "message": "Connection successful."}
+    except Exception as e:
+        logger.warning(f"LLM test connection failed: {str(e)}")
+        return {"success": False, "error": str(e)}
 
 @app.get("/worker/health")
 async def get_worker_health():
@@ -90,11 +155,48 @@ async def invoke_agent(request: AgentRequest):
     
     # Extract optional dynamic LLM config overrides from context
     context = request.context or {}
+    llm_provider = context.get("llm_provider", settings.DEFAULT_LLM_PROVIDER)
+    
+    # Resolve values based on selected provider and fallbacks
     llm_base_url = context.get("llm_base_url")
     llm_model = context.get("llm_model")
     llm_api_key = context.get("llm_api_key")
-    llm_temperature = context.get("llm_temperature")
-    llm_max_tokens = context.get("llm_max_tokens")
+    
+    if not llm_base_url:
+        if llm_provider == "local_qwen":
+            llm_base_url = settings.QWEN_BASE_URL
+        elif llm_provider == "minimax":
+            llm_base_url = "https://api.minimax.chat/v1"
+        else:
+            llm_base_url = settings.QWEN_BASE_URL
+            
+    if not llm_model:
+        if llm_provider == "local_qwen":
+            llm_model = settings.QWEN_MODEL
+        elif llm_provider == "minimax":
+            llm_model = "MiniMax-M1"
+        else:
+            llm_model = settings.QWEN_MODEL
+            
+    if llm_api_key is None:
+        if llm_provider == "local_qwen":
+            llm_api_key = settings.QWEN_API_KEY
+        elif llm_provider == "minimax":
+            # Will be validated below
+            llm_api_key = None
+        else:
+            llm_api_key = settings.QWEN_API_KEY
+
+    # Validate MiniMax API Key existence
+    if llm_provider == "minimax" and not llm_api_key:
+        logger.warning("Request rejected: MiniMax API key is missing.")
+        return JSONResponse(
+            status_code=400,
+            content={"error": "MiniMax API key is required. Please enter your API key or choose Local Qwen."}
+        )
+        
+    llm_temperature = context.get("llm_temperature", settings.QWEN_TEMPERATURE)
+    llm_max_tokens = context.get("llm_max_tokens", settings.QWEN_MAX_TOKENS)
     
     # Mask API key in debug logs
     masked_key = "None"
@@ -105,7 +207,7 @@ async def invoke_agent(request: AgentRequest):
             masked_key = llm_api_key[:4] + "..." if len(llm_api_key) > 4 else "..."
             
     logger.info(
-        f"Dynamic LLM override detected: base_url={llm_base_url}, model={llm_model}, key={masked_key}, "
+        f"Dynamic LLM override detected: provider={llm_provider}, base_url={llm_base_url}, model={llm_model}, key={masked_key}, "
         f"temp={llm_temperature}, max_tokens={llm_max_tokens}"
     )
     
@@ -129,7 +231,6 @@ async def invoke_agent(request: AgentRequest):
     
     try:
         # Invoke the LangGraph workflow
-        # Runs synchronously (using thread pool in FastAPI background if desired, or directly here)
         result = agent_workflow.invoke(initial_state)
         
         # Build the structured trace items
@@ -145,7 +246,8 @@ async def invoke_agent(request: AgentRequest):
             answer=result.get("final_answer", "Error: No final answer generated by workflow."),
             task_type=result.get("task_type", "general_chat"),
             agent_trace=trace_items,
-            need_human_review=result.get("need_human_review", False)
+            need_human_review=result.get("need_human_review", False),
+            error=None
         )
         
         logger.info(f"Workflow completed successfully. task_type={response.task_type}, need_human_review={response.need_human_review}")
@@ -153,7 +255,17 @@ async def invoke_agent(request: AgentRequest):
         
     except Exception as e:
         logger.error(f"Error executing workflow: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Internal error executing agent workflow: {str(e)}"
+        
+        # Formulate structured response error
+        if llm_provider == "local_qwen":
+            error_msg = f"Local Qwen server is not reachable at {llm_base_url}. Please start Qwen server or choose another model provider."
+        else:
+            error_msg = f"Model provider '{llm_provider}' is not reachable at {llm_base_url}. Details: {str(e)}"
+            
+        return AgentResponse(
+            answer="",
+            task_type="error",
+            agent_trace=[],
+            need_human_review=True,
+            error=error_msg
         )

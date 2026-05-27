@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 class AgentRequest(BaseModel):
     query: str = Field(..., description="The user query or prompt.")
@@ -16,3 +16,10 @@ class AgentResponse(BaseModel):
     task_type: str = Field(..., description="The determined task type.")
     agent_trace: List[AgentTraceItem] = Field(default_factory=list, description="Execution trace of the workflow.")
     need_human_review: bool = Field(False, description="Flag indicating if human review is needed.")
+    error: Optional[str] = Field(None, description="Detailed error message if the call failed.")
+
+class LLMTestRequest(BaseModel):
+    llm_provider: str = Field(..., description="The model provider (local_qwen, minimax, or custom_openai).")
+    llm_base_url: str = Field(..., description="The Base URL override for this test.")
+    llm_model: str = Field(..., description="The model name override for this test.")
+    llm_api_key: Optional[str] = Field("EMPTY", description="The API Key override for this test.")
