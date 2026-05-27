@@ -11,3 +11,8 @@ Start the model server: bash qwen_server/start_qwen_vllm_docker.sh (or bash qwen
 Test connectivity: python qwen_server/test_qwen_api.py
 Start the agent server: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 Test integrated agent flow: python scripts/test_agent.py
+'
+
+
+python scripts/infer_rag_single.py --config configs/rag.yaml --final-snapshot examples/final_snapshot.png --prev-depth-map examples/prev_depth_map.png --output-dir outputs/rag_single
+
