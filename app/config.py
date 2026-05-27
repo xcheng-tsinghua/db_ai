@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     QWEN_TEMPERATURE: float = 0.2
     QWEN_MAX_TOKENS: int = 2048
 
+    # Windows Agent Worker Configuration
+    WINDOWS_WORKER_BASE_URL: str = "http://127.0.0.1:9100"
+    ENABLE_WINDOWS_WORKER: bool = False
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

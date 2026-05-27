@@ -52,7 +52,7 @@ Before starting the FastAPI backend, you must host your Qwen model. Make sure it
 
 #### Option A: Transformers direct loading (Recommended Fallback / Stable)
 For environments where vLLM causes driver or torch mismatches, you can serve `Qwen2.5-7B-Instruct` directly via PyTorch/Transformers on port `8001`.
-See [qwen_server_transformers/README.md](file:///e:/document/DeepLearning/db_ai/dify-langgraph-qwen-demo/qwen_server_transformers/README.md) for detailed configuration.
+See [qwen_server_transformers/README.md](file:///e:/document/DeepLearning/db_ai/qwen_server_transformers/README.md) for detailed configuration.
 To run:
 ```bash
 bash qwen_server_transformers/start_qwen_transformers.sh
@@ -144,6 +144,19 @@ To test using a visual web interface:
    ```
    *(For secure access or if port 8501 is closed, use SSH port-forwarding: `ssh -L 8501:127.0.0.1:8501 user@<SERVER_IP>` and open `http://127.0.0.1:8501`)*.
 
+#### Step 7: Start and Connect Windows Agent Worker (Optional)
+To execute safe local tools (file listings, read/write files, screenshotting, python script execution, browser URL opening) from your laptop environment:
+1. Initialize and start the worker locally on your Windows host:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File windows_worker\start_worker.ps1
+   ```
+2. Configure your backend server's `.env` file to communicate with the worker:
+   ```ini
+   ENABLE_WINDOWS_WORKER=true
+   WINDOWS_WORKER_BASE_URL=http://127.0.0.1:9100
+   ```
+3. Read the detailed [docs/windows_worker_guide.md](file:///e:/document/DeepLearning/db_ai/docs/windows_worker_guide.md) for strict sandboxing rules, safety flag adjustments, and API information.
+
 ---
 
 
@@ -158,7 +171,7 @@ To test using a visual web interface:
 
 ### Dynamic Model Provider Selection (Request Context)
 The FastAPI backend supports per-request model provider overrides via the `context` dictionary block in requests to `POST /agent/invoke`.
-If context parameters (`llm_base_url`, `llm_model`, `llm_api_key`, `llm_temperature`, `llm_max_tokens`) are sent, they override the server environment defaults for that request transaction only. This is highly useful for benchmarking the graph with external services like MiniMax (`MiniMax-M1` - default external provider), OpenAI (`gpt-4o-mini`), DeepSeek (`deepseek-chat`), or DashScope (`qwen-plus`). See [web_ui/README.md](file:///e:/document/DeepLearning/db_ai/dify-langgraph-qwen-demo/web_ui/README.md) for JSON override schemas and examples.
+If context parameters (`llm_base_url`, `llm_model`, `llm_api_key`, `llm_temperature`, `llm_max_tokens`) are sent, they override the server environment defaults for that request transaction only. This is highly useful for benchmarking the graph with external services like MiniMax (`MiniMax-M1` - default external provider), OpenAI (`gpt-4o-mini`), DeepSeek (`deepseek-chat`), or DashScope (`qwen-plus`). See [web_ui/README.md](file:///e:/document/DeepLearning/db_ai/web_ui/README.md) for JSON override schemas and examples.
 
 ---
 

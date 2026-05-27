@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.schemas import AgentRequest, AgentResponse, AgentTraceItem
 from app.graph.workflow import agent_workflow
+from app.tools.windows_worker_client import worker_client
 
 # Configure logging
 logging.basicConfig(
@@ -36,6 +37,52 @@ def health_check():
         "model_configured": settings.QWEN_MODEL,
         "base_url": settings.QWEN_BASE_URL
     }
+
+@app.get("/worker/health")
+async def get_worker_health():
+    if not settings.ENABLE_WINDOWS_WORKER:
+        raise HTTPException(
+            status_code=400,
+            detail="Windows Agent Worker is disabled. Enable it by setting ENABLE_WINDOWS_WORKER=true in configuration."
+        )
+    try:
+        health_info = await worker_client.get_health()
+        return health_info
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+@app.post("/worker/tools/list")
+async def list_worker_tools():
+    if not settings.ENABLE_WINDOWS_WORKER:
+        raise HTTPException(
+            status_code=400,
+            detail="Windows Agent Worker is disabled. Enable it by setting ENABLE_WINDOWS_WORKER=true in configuration."
+        )
+    try:
+        tools = await worker_client.list_tools()
+        return tools
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+@app.post("/worker/tools/execute")
+async def execute_worker_tool(request_payload: dict):
+    if not settings.ENABLE_WINDOWS_WORKER:
+        raise HTTPException(
+            status_code=400,
+            detail="Windows Agent Worker is disabled. Enable it by setting ENABLE_WINDOWS_WORKER=true in configuration."
+        )
+    tool_name = request_payload.get("tool_name")
+    arguments = request_payload.get("arguments", {})
+    request_id = request_payload.get("request_id")
+    
+    if not tool_name:
+        raise HTTPException(status_code=400, detail="tool_name is a required field.")
+        
+    try:
+        result = await worker_client.execute_tool(tool_name, arguments, request_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
 @app.post("/agent/invoke", response_model=AgentResponse)
 async def invoke_agent(request: AgentRequest):

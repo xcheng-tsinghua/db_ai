@@ -294,6 +294,104 @@ try:
 except Exception:
     st.sidebar.markdown("**Backend Health**: ❌ `OFFLINE`")
 
+# Windows Worker Test Section
+st.sidebar.markdown("---")
+with st.sidebar.expander("🖥️ Windows Worker Test", expanded=False):
+    worker_health_url = backend_url.replace("/agent/invoke", "/worker/health")
+    worker_list_url = backend_url.replace("/agent/invoke", "/worker/tools/list")
+    worker_execute_url = backend_url.replace("/agent/invoke", "/worker/tools/execute")
+    
+    # 1. Health Status
+    col_h1, col_h2 = st.columns([1, 1])
+    with col_h1:
+        st.markdown("**Status**")
+    with col_h2:
+        try:
+            h_res = requests.get(worker_health_url, timeout=3)
+            if h_res.status_code == 200:
+                h_data = h_res.json()
+                st.markdown("<span style='color:#10b981; font-weight:bold;'>ONLINE</span>", unsafe_allow_html=True)
+                allow_shell = h_data.get("allow_shell", False)
+            else:
+                st.markdown("<span style='color:#ef4444; font-weight:bold;'>OFFLINE</span>", unsafe_allow_html=True)
+                allow_shell = False
+        except Exception:
+            st.markdown("<span style='color:#ef4444; font-weight:bold;'>OFFLINE</span>", unsafe_allow_html=True)
+            allow_shell = False
+            
+    # 2. List tools
+    if st.button("📋 List Available Tools", use_container_width=True):
+        try:
+            l_res = requests.post(worker_list_url, timeout=5)
+            if l_res.status_code == 200:
+                tools_list = l_res.json()
+                if not tools_list:
+                    st.info("No tools registered.")
+                for t in tools_list:
+                    st.markdown(f"**`{t.get('name')}`**")
+                    st.markdown(f"<span style='font-size:0.9rem; color:#cbd5e1;'>{t.get('description')}</span>", unsafe_allow_html=True)
+            else:
+                st.error(f"Error listing tools: {l_res.text}")
+        except Exception as e:
+            st.error(f"Error: {e}")
+            
+    # 3. Tool Execution Forms
+    st.markdown("**Execute Tool**")
+    tool_options = ["list_dir", "read_text_file", "write_text_file", "open_url", "take_screenshot"]
+    if allow_shell:
+        tool_options.append("run_powershell_command")
+        
+    selected_tool = st.selectbox(
+        "Select Tool",
+        options=tool_options,
+        key="selected_worker_tool"
+    )
+    
+    with st.form("worker_tool_form"):
+        args = {}
+        if selected_tool == "list_dir":
+            rel_path = st.text_input("Relative Path", value=".", key="list_dir_rel_path")
+            args = {"relative_path": rel_path}
+        elif selected_tool == "read_text_file":
+            rel_path = st.text_input("Relative Path", value="notes/test.txt", key="read_text_rel_path")
+            args = {"relative_path": rel_path}
+        elif selected_tool == "write_text_file":
+            rel_path = st.text_input("Relative Path", value="notes/test.txt", key="write_text_rel_path")
+            file_content = st.text_area("File Content", value="Hello from AI worker", key="write_text_content")
+            args = {"relative_path": rel_path, "content": file_content}
+        elif selected_tool == "open_url":
+            url_to_open = st.text_input("URL", value="https://api.minimax.chat/", key="open_url_val")
+            args = {"url": url_to_open}
+        elif selected_tool == "take_screenshot":
+            screenshot_path = st.text_input("Relative Path", value="screenshot.png", key="take_screenshot_rel_path")
+            args = {"relative_path": screenshot_path}
+        elif selected_tool == "run_powershell_command":
+            cmd_to_run = st.text_input("PowerShell Command", value="Get-Process", key="run_ps_cmd")
+            args = {"command": cmd_to_run}
+            
+        run_tool_btn = st.form_submit_button("▶️ Run Tool", use_container_width=True)
+        
+    if run_tool_btn:
+        with st.spinner(f"Running {selected_tool}..."):
+            try:
+                exec_payload = {
+                    "tool_name": selected_tool,
+                    "arguments": args,
+                    "request_id": f"ui-{int(datetime.datetime.now().timestamp())}"
+                }
+                exec_res = requests.post(worker_execute_url, json=exec_payload, timeout=65)
+                if exec_res.status_code == 200:
+                    res_json = exec_res.json()
+                    if res_json.get("success"):
+                        st.success("Tool execution successful!")
+                        st.json(res_json.get("result"))
+                    else:
+                        st.error(f"Execution failed: {res_json.get('error')}")
+                else:
+                    st.error(f"Proxy error ({exec_res.status_code}): {exec_res.text}")
+            except Exception as e:
+                st.error(f"Failed calling worker: {e}")
+
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🖥️ System Info")
 st.sidebar.markdown("- **Host Mode**: Remote Server")
