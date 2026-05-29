@@ -75,15 +75,13 @@ docs/                      Additional guides
 
 ## Configuration
 
-Create your runtime environment file:
-
-```bash
-cp .env.example .env
-```
-
-The default `.env.example` targets the local Transformers Qwen server:
+Configure your runtime parameters directly in the `.env` file at the root of the repository:
 
 ```env
+HOST=0.0.0.0
+PORT=8000
+DEBUG=true
+
 QWEN_BASE_URL=http://127.0.0.1:8001/v1
 QWEN_MODEL=qwen7b
 QWEN_API_KEY=EMPTY
@@ -91,6 +89,14 @@ QWEN_TEMPERATURE=0.2
 QWEN_MAX_TOKENS=2048
 LLM_REQUEST_TIMEOUT_SECONDS=300
 
+# Default LLM Provider Settings
+DEFAULT_LLM_PROVIDER=local_qwen
+
+# Windows Agent Worker Settings
+ENABLE_WINDOWS_WORKER=false
+WINDOWS_WORKER_BASE_URL=http://127.0.0.1:9100
+
+# Local Qwen serving parameters
 QWEN_MODEL_PATH=/data/models/Qwen2.5-7B-Instruct
 QWEN_SERVED_MODEL_NAME=qwen7b
 QWEN_HOST=0.0.0.0
