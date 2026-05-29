@@ -181,3 +181,13 @@ Success! Response from server:
 }
 
 
+此外我的web应用需要兼容输入和输出图片
+将默认的 api 参数改为 MiniMax-M2.7-highspeed，api key我自己输入
+
+
+
+my web application needs to be compatible with both input and output images. change the default API parameters to MiniMax-M2.7-highspeed, remove the Custom OpenAI-compatible API.
+
+
+
+
