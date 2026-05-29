@@ -10,7 +10,7 @@ The application is structured into the following layers:
 [ Frontend: React / TS / CSS ] (Vite server on :5173)
              │
              ▼
-[ Backend API: FastAPI ] (Uvicorn server on :8000)
+[ Backend API: FastAPI ] (Uvicorn server on :8001)
              │
              ├───────────────► [ Settings & Dynamic Registry Router ]
              │

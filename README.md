@@ -35,9 +35,9 @@ cp .env.example .env
     ```
 3.  Start the FastAPI application server:
     ```bash
-    uvicorn backend.app.main:app --reload --port 8000
+    uvicorn backend.app.main:app --reload --port 8001
     ```
-4.  Verify the REST API interactive docs are running at: `http://localhost:8000/docs`.
+4.  Verify the REST API interactive docs are running at: `http://localhost:8001/docs`.
 
 ### 2. Run the React Frontend
 1.  Open a new terminal, activate the conda environment to use the environment's Node/npm binaries:

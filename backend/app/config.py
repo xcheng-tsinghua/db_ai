@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     # App Settings
     APP_NAME: str = "AI Agent Base"
     DEBUG: bool = True
-    PORT: int = 8000
+    PORT: int = 8001
     HOST: str = "127.0.0.1"
 
     # Default Active Provider (minimax, openai_compatible, local_qwen)
