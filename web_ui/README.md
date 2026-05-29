@@ -73,8 +73,8 @@ This is the default local option. No API key is required.
 * **Model Name**: `qwen7b`
 
 ### Option 2: MiniMax API (Default External Provider)
-This is the default option for external API calls, which is multimodal-enabled.
-* **Base URL**: `https://api.minimax.chat/v1`
+This option uses the OpenAI-compatible MiniMax text chat API. MiniMax image understanding is not supported on this chat endpoint; image generation is handled through MiniMax's separate `/v1/image_generation` API when enabled in the sidebar.
+* **Base URL**: `https://api.minimax.io/v1`
 * **Model Name**: `MiniMax-M2.7-highspeed`
 * **API Key**: Enter your MiniMax API key in the password field.
 
@@ -83,8 +83,10 @@ This is the default option for external API calls, which is multimodal-enabled.
 ## 4.5 Image Processing Compatibility (Multimodal)
 
 The web application is compatible with both input and output images:
-1. **Input Images**: You can upload an image (PNG, JPG, JPEG, or WEBP) alongside your query in the prompt area. The image is base64-serialized and forwarded to the backend for multimodal processing (e.g. diagnosing visual defects in parts).
-2. **Output Images**: When executing local tools such as `take_screenshot` in the Windows Worker Test panel, the captured screen is returned as base64 data and displayed inline directly within your Web UI.
+1. **Input Images**: You can upload an image (PNG, JPG, JPEG, or WEBP) alongside your query in the prompt area. The image is base64-serialized and forwarded to the backend.
+2. **Vision Models**: The backend sends uploaded images to the chat model only when the selected provider/model is marked as image-understanding capable. For local Qwen, use a Qwen-VL model and enable the vision checkbox in the sidebar.
+3. **Text-only Models**: If the selected chat model does not support vision, the backend does not send image blocks to that model. This prevents Qwen `422 Unprocessable Entity` errors and avoids MiniMax text chat claiming that no image was uploaded.
+4. **Output Images**: MiniMax image output is supported through the dedicated image generation API when "Enable MiniMax image output" is selected. Windows Worker screenshots are also displayed inline when returned by the worker.
 
 ---
 

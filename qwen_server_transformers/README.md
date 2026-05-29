@@ -15,6 +15,7 @@ This server is designed as a **highly compatible fallback** for environments whe
 * **Defaults**: Uses `Qwen2.5-7B-Instruct` as the default model.
 * **Speed**: Slower than vLLM (does not utilize PagedAttention, vLLM continuous batching, etc.), but acts as an excellent, error-resistant choice for development and MVP validation.
 * **API Compatibility**: Implements a subset of the OpenAI Chat Completions API (`/v1/chat/completions` and `/v1/models`), meaning the FastAPI/LangGraph backend can switch to it seamlessly with zero code changes.
+* **Multimodal Safety**: OpenAI-style image message blocks are accepted. Text-only Qwen models flatten image blocks into a clear limitation note instead of returning `422`. To actually analyze images, run a Qwen-VL model and enable vision mode.
 
 ---
 
@@ -47,11 +48,22 @@ QWEN_MAX_NEW_TOKENS=2048
 QWEN_TEMPERATURE=0.2
 QWEN_TOP_P=0.8
 QWEN_REPETITION_PENALTY=1.05
+QWEN_ENABLE_VISION=auto
 ```
 
 Before running, ensure that:
 1. The folder `/data/models/Qwen2.5-7B-Instruct` (or your relative path `data/models/Qwen2.5-7B-Instruct`) contains the Qwen model weights and files.
 2. A valid `config.json` is present in that directory.
+
+For image understanding, use a vision-language model such as Qwen2.5-VL and set:
+
+```env
+QWEN_MODEL_PATH=/data/models/Qwen2.5-VL-7B-Instruct
+QWEN_SERVED_MODEL_NAME=qwen-vl
+QWEN_ENABLE_VISION=true
+```
+
+The vision path also requires the dependencies in `qwen_server_transformers/requirements_transformers.txt`, including `pillow` and `qwen-vl-utils`.
 
 ---
 

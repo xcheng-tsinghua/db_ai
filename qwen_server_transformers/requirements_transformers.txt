@@ -9,3 +9,5 @@ sentencepiece
 protobuf
 requests
 openai
+pillow
+qwen-vl-utils

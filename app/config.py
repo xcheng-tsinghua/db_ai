@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     QWEN_MAX_TOKENS: int = 2048
     LLM_REQUEST_TIMEOUT_SECONDS: float = 300.0
 
+    # MiniMax API Configuration
+    MINIMAX_BASE_URL: str = "https://api.minimax.io/v1"
+    MINIMAX_IMAGE_GENERATION_URL: str = "https://api.minimax.io/v1/image_generation"
+    MINIMAX_IMAGE_MODEL: str = "image-01"
+    IMAGE_REQUEST_TIMEOUT_SECONDS: float = 300.0
+
     # Default LLM Provider Settings
     DEFAULT_LLM_PROVIDER: str = "local_qwen"
 

@@ -89,6 +89,11 @@ QWEN_TEMPERATURE=0.2
 QWEN_MAX_TOKENS=2048
 LLM_REQUEST_TIMEOUT_SECONDS=300
 
+MINIMAX_BASE_URL=https://api.minimax.io/v1
+MINIMAX_IMAGE_GENERATION_URL=https://api.minimax.io/v1/image_generation
+MINIMAX_IMAGE_MODEL=image-01
+IMAGE_REQUEST_TIMEOUT_SECONDS=300
+
 # Default LLM Provider Settings
 DEFAULT_LLM_PROVIDER=local_qwen
 
@@ -106,6 +111,7 @@ QWEN_DTYPE=auto
 QWEN_MAX_NEW_TOKENS=2048
 QWEN_TOP_P=0.8
 QWEN_REPETITION_PENALTY=1.05
+QWEN_ENABLE_VISION=auto
 ```
 
 Important timeout settings:
@@ -262,7 +268,9 @@ Response shape:
     }
   ],
   "need_human_review": true,
-  "error": null
+  "error": null,
+  "output_images": [],
+  "warnings": []
 }
 ```
 
@@ -280,7 +288,8 @@ You can override the model provider per request by sending values in `context`.
     "llm_model": "qwen7b",
     "llm_api_key": "EMPTY",
     "llm_temperature": 0.2,
-    "llm_max_tokens": 2048
+    "llm_max_tokens": 2048,
+    "llm_supports_vision": false
   }
 }
 ```
@@ -289,6 +298,15 @@ Supported provider labels in the current backend:
 
 - `local_qwen`
 - `minimax`
+
+Multimodal request context:
+
+- `image_base64`: uploaded image bytes as base64.
+- `image_mime_type`: for example `image/png` or `image/jpeg`.
+- `llm_supports_vision`: set `true` only when the selected chat model can inspect images.
+- `enable_image_output`: set `true` to allow image generation.
+- `image_output_mode`: `auto`, `always`, or `never`.
+- `image_generation_model`: defaults to `image-01` for MiniMax image generation.
 
 ## Dify Integration
 
@@ -339,9 +357,9 @@ Features:
 
 - Sends prompts to `POST /agent/invoke`.
 - Shows final answer, task type, human-review flag, and agent trace.
-- Lets you switch between local Qwen and MiniMax (default multimodal `MiniMax-M2.7-highspeed`).
-- Supports uploading input images for vision analysis.
-- Supports inline rendering of output images (such as worker screenshots).
+- Lets you switch between local Qwen and MiniMax.
+- Supports uploading input images. Images are sent to chat models only when the selected endpoint is marked vision-capable.
+- Supports inline rendering of generated output images and worker screenshots.
 - Includes a model connection test button.
 
 See [web_ui/README.md](web_ui/README.md) for more detail.

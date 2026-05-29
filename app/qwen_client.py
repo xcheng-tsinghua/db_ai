@@ -1,6 +1,7 @@
 import logging
 from openai import OpenAI, APIError, APIConnectionError
 from app.config import settings
+from app.multimodal import stringify_message_content
 
 logger = logging.getLogger(__name__)
 
@@ -65,8 +66,9 @@ class QwenClient:
             )
             if response.choices and len(response.choices) > 0:
                 content = response.choices[0].message.content
-                if content:
-                    return content.strip()
+                content_text = stringify_message_content(content)
+                if content_text:
+                    return content_text
             raise RuntimeError("Error: Received empty response from model endpoint.")
         except APIConnectionError as e:
             logger.error(f"Cannot connect to model server at {target_base_url}: {e}")

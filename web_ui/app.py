@@ -1,6 +1,7 @@
 import os
 import requests
 import datetime
+import base64
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -218,7 +219,7 @@ elif llm_provider == "MiniMax API":
         "⚠️ MiniMax API credentials are sent in-memory for this request only. "
         "Do not expose this Web UI publicly without authentication."
     )
-    llm_base_url = st.sidebar.text_input("API Base URL Override", value="https://api.minimax.chat/v1")
+    llm_base_url = st.sidebar.text_input("API Base URL Override", value="https://api.minimax.io/v1")
     llm_model = st.sidebar.text_input("Model Name Override", value="MiniMax-M2.7-highspeed")
     llm_api_key = st.sidebar.text_input("API Key (Password Field)", type="password", placeholder="Paste MiniMax API key here")
     temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.5, value=0.2, step=0.1)
@@ -229,6 +230,49 @@ elif llm_provider == "MiniMax API":
     st.sidebar.markdown(f"**Base URL**: `{llm_base_url}`")
     st.sidebar.markdown(f"**Model**: `{llm_model}`")
     st.sidebar.markdown(f"**API Key**: `{masked_key}`")
+
+llm_supports_vision = False
+if llm_provider == "Local Qwen":
+    llm_supports_vision = "vl" in llm_model.lower()
+    llm_supports_vision = st.sidebar.checkbox(
+        "Local model supports image understanding",
+        value=llm_supports_vision,
+        help="Enable only when your local endpoint serves a Qwen-VL or other vision-capable model."
+    )
+elif llm_provider == "MiniMax API":
+    st.sidebar.info(
+        "MiniMax text chat models do not currently accept image/audio inputs via the OpenAI-compatible chat endpoint. "
+        "Uploaded images can still be used as references for MiniMax image generation."
+    )
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### Image Output")
+enable_image_output = False
+image_output_mode = "auto"
+image_generation_model = "image-01"
+output_image_aspect_ratio = "1:1"
+output_image_count = 1
+
+if llm_provider == "MiniMax API":
+    enable_image_output = st.sidebar.checkbox(
+        "Enable MiniMax image output",
+        value=False,
+        help="Uses MiniMax /v1/image_generation when your prompt requests an image."
+    )
+    if enable_image_output:
+        image_output_mode = st.sidebar.selectbox(
+            "Image Output Mode",
+            options=["auto", "always"],
+            index=0,
+            help="Auto generates images only for image-generation prompts. Always generates for every request."
+        )
+        image_generation_model = st.sidebar.text_input("Image Model", value="image-01")
+        output_image_aspect_ratio = st.sidebar.selectbox(
+            "Aspect Ratio",
+            options=["1:1", "16:9", "4:3", "3:2", "2:3", "3:4", "9:16", "21:9"],
+            index=0
+        )
+        output_image_count = st.sidebar.number_input("Image Count", min_value=1, max_value=9, value=1)
 
 # Test Selected Model Button
 if st.sidebar.button("🔌 Test Selected Model Connection", use_container_width=True):
@@ -443,11 +487,20 @@ with col_input:
         image_base64 = None
         image_mime_type = None
         if uploaded_file is not None:
-            import base64
             bytes_data = uploaded_file.getvalue()
             image_base64 = base64.b64encode(bytes_data).decode("utf-8")
             image_mime_type = uploaded_file.type
             st.image(uploaded_file, caption="Input Image Preview", width=300)
+            if llm_provider == "MiniMax API":
+                st.info(
+                    "MiniMax chat will not inspect this image directly. If image output is enabled, "
+                    "the image can be sent to MiniMax image generation as a reference."
+                )
+            elif not llm_supports_vision:
+                st.warning(
+                    "The selected local model is marked as text-only. The backend will keep the request valid, "
+                    "but the model will not inspect the image content."
+                )
             
         user_id = st.text_input("User ID", value="web_demo_user")
         
@@ -471,7 +524,13 @@ if submit_btn:
                     "llm_model": llm_model,
                     "llm_api_key": llm_api_key,
                     "llm_temperature": temperature,
-                    "llm_max_tokens": max_tokens
+                    "llm_max_tokens": max_tokens,
+                    "llm_supports_vision": llm_supports_vision,
+                    "enable_image_output": enable_image_output,
+                    "image_output_mode": image_output_mode,
+                    "image_generation_model": image_generation_model,
+                    "output_image_aspect_ratio": output_image_aspect_ratio,
+                    "output_image_count": output_image_count
                 }
                 if image_base64:
                     context_payload["image_base64"] = image_base64
@@ -484,7 +543,7 @@ if submit_btn:
                 }
                 
                 try:
-                    response = requests.post(backend_url, json=payload, timeout=120)
+                    response = requests.post(backend_url, json=payload, timeout=300)
                     
                     if response.status_code == 200:
                         res_data = response.json()
@@ -493,6 +552,8 @@ if submit_btn:
                         task_type = res_data.get("task_type", "unknown")
                         need_review = res_data.get("need_human_review", False)
                         agent_trace = res_data.get("agent_trace", [])
+                        warnings = res_data.get("warnings", [])
+                        output_images = res_data.get("output_images", [])
                         
                         # Style Badge Header Container
                         badge_html = f'<span class="badge badge-task-type">Task: {task_type.upper()}</span>'
@@ -513,6 +574,32 @@ if submit_btn:
                             st.warning(answer)
                         else:
                             st.success(answer)
+
+                        if warnings:
+                            for warning_msg in warnings:
+                                st.warning(warning_msg)
+
+                        if output_images:
+                            st.markdown('<div class="card-header">Generated Images</div>', unsafe_allow_html=True)
+                            for image_idx, image_item in enumerate(output_images, start=1):
+                                caption = f"Generated Image {image_idx}"
+                                provider = image_item.get("provider")
+                                model = image_item.get("model")
+                                if provider or model:
+                                    caption += f" ({provider or 'provider unknown'} / {model or 'model unknown'})"
+
+                                if image_item.get("image_base64"):
+                                    try:
+                                        st.image(
+                                            base64.b64decode(image_item["image_base64"]),
+                                            caption=caption,
+                                            use_container_width=True
+                                        )
+                                    except Exception as img_err:
+                                        st.error(f"Failed to render generated image: {img_err}")
+                                elif image_item.get("url"):
+                                    st.image(image_item["url"], caption=caption, use_container_width=True)
+                                    st.markdown(f"[Open image URL]({image_item['url']})")
                         
                         # 2. Agent Trace
                         st.markdown('<div class="card-header">🔍 Agent Workflow Execution Trace</div>', unsafe_allow_html=True)

@@ -189,5 +189,11 @@ Success! Response from server:
 my web application needs to be compatible with both input and output images. change the default API parameters to MiniMax-M2.7-highspeed, remove the Custom OpenAI-compatible API.
 
 
+我的web应用在上传图片时，QWen报错：INFO:     127.0.0.1:42160 - "POST /v1/chat/completions HTTP/1.1" 422 Unprocessable Entity。此外在使用minimax api时，出现的回复里说未看到图片上传，检查我的代码，看是哪出了问题？我的web应用需要支持图片、文本输入，同时支持图片、文本输出（如果模型或api支持图片输出，且有图片输出时需要支持输出图片）
+
+
+
+My web application is throwing a QWen error when uploading images: INFO: 127.0.0.1:42160 - "POST /v1/chat/completions HTTP/1.1" 422 Unprocessable Entity. Additionally, when using the Minimax API, the response says that no image upload is seen. Please check my code to see where the problem is and fix the bug. My web application needs to support image and text input, and also support image and text output (if the model or API supports image output, and image output is available, it needs to support image output).
+
 
 

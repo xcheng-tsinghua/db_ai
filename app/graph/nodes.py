@@ -1,6 +1,7 @@
 from typing import Dict, Any
 from app.graph.state import AgentState
 from app.qwen_client import qwen_client
+from app.multimodal import build_user_content_for_model, normalize_input_images
 from app.prompts.router_prompt import ROUTER_SYSTEM_PROMPT
 from app.prompts.analysis_prompt import ANALYSIS_SYSTEM_PROMPT_MAP
 from app.prompts.writer_prompt import WRITER_SYSTEM_PROMPT
@@ -61,16 +62,12 @@ def analysis_node(state: AgentState) -> Dict[str, Any]:
     system_prompt = ANALYSIS_SYSTEM_PROMPT_MAP.get(task_type, ANALYSIS_SYSTEM_PROMPT_MAP["general_chat"])
     
     context_dict = state.get("context", {}) or {}
-    image_base64 = context_dict.get("image_base64")
-    
-    if image_base64:
-        mime_type = context_dict.get("image_mime_type", "image/jpeg")
-        user_content = [
-            {"type": "text", "text": query},
-            {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{image_base64}"}}
-        ]
-    else:
-        user_content = query
+    user_content, media_warnings, sent_images_to_model = build_user_content_for_model(
+        query=query,
+        context=context_dict,
+        provider=context_dict.get("llm_provider"),
+        model=state.get("llm_model"),
+    )
         
     messages = [
         {"role": "system", "content": system_prompt},
@@ -84,19 +81,27 @@ def analysis_node(state: AgentState) -> Dict[str, Any]:
     if task_type == "quality_analysis":
         need_human_review = True
         
+    image_count = len(normalize_input_images(context_dict))
+    image_trace = ""
+    if image_count:
+        routing = "sent to vision-capable model" if sent_images_to_model else "not sent to text-only model"
+        image_trace = f" | Images: {image_count} ({routing})"
+
     trace = {
         "agent": "analysis",
-        "input": f"Task Type: {task_type} | Query: {query}",
+        "input": f"Task Type: {task_type} | Query: {query}{image_trace}",
         "output": output
     }
     
     current_trace = state.get("agent_trace", [])
     new_trace = list(current_trace) + [trace]
+    current_warnings = state.get("warnings", [])
     
     return {
         "analysis_output": output,
         "need_human_review": need_human_review,
-        "agent_trace": new_trace
+        "agent_trace": new_trace,
+        "warnings": list(current_warnings) + media_warnings
     }
 
 def writer_node(state: AgentState) -> Dict[str, Any]:
