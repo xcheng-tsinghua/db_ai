@@ -194,7 +194,7 @@ export default function App() {
     setImageRawJson(resp);
     if (resp.success && resp.data) {
       // Find URL in data
-      const url = resp.data.images?.[0]?.url || resp.data.data?.[0]?.url || resp.data.url;
+      const url = resp.data.images?.[0]?.url || resp.data.data?.[0]?.url || resp.data.data?.image_urls?.[0] || resp.data.url;
       if (url) {
         setGeneratedImageUrl(url);
         addLog(`Image generated successfully!`);
@@ -575,7 +575,7 @@ export default function App() {
       <aside className="sidebar">
         <div className="brand">
           <img src="/logo_icon.png" alt="Logo" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid hsl(var(--primary) / 0.3)' }} />
-          <span>AI Agent Base</span>
+          <span>DB AI</span>
         </div>
         
         <ul className="nav-menu">

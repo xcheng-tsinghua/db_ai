@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # App Settings
-    APP_NAME: str = "AI Agent Base"
+    APP_NAME: str = "DB AI"
     DEBUG: bool = True
     PORT: int = 8001
     HOST: str = "127.0.0.1"
