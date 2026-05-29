@@ -1,304 +1,493 @@
-# Dify + LangGraph + self-hosted Qwen Multi-Agent MVP
+# Dify + LangGraph + Qwen Agent Backend
 
-This repository contains a Minimum Viable Product (MVP) system demonstrating a local enterprise-grade AI architecture using **Dify** for the frontend orchestrator, **LangGraph** for structured multi-agent logic, and a self-hosted **Qwen** model for local inference.
+This project is a local multi-agent backend for Dify-style enterprise workflows. It exposes a FastAPI endpoint, runs a LangGraph workflow, and calls an OpenAI-compatible LLM provider such as a self-hosted Qwen server.
 
----
+The default setup is designed for a local Transformers Qwen server running on port `8001`, a FastAPI agent backend on port `8000`, and an optional Streamlit test UI on port `8501`.
 
-## 1. System Architecture
+## What It Does
 
-The workflow routes user queries dynamically, performs domain-specific reasoning, and generates structured report formats suited for industrial operations:
+- Accepts user questions through `POST /agent/invoke`.
+- Routes each question into one task type:
+  - `quality_analysis`
+  - `document_qa`
+  - `general_chat`
+- Runs a three-step LangGraph workflow:
+  - Router agent
+  - Analysis agent
+  - Writer agent
+- Returns a structured JSON response that Dify, Streamlit, or another client can display.
+- Supports per-request LLM provider overrides through the request `context`.
+- Includes an optional Windows worker for sandboxed local tools.
+
+## Architecture
 
 ```mermaid
-graph TD
-    User([User]) -->|Interact| Dify[Dify Web App]
-    Dify -->|HTTP POST /agent/invoke| FastAPI[FastAPI Server]
-    
-    subgraph FastAPI Agent Server
-        FastAPI -->|Invoke| LangGraph[LangGraph Engine]
-        
-        subgraph LangGraph Multi-Agent Workflow
-            LangGraph --> RouterNode[1. Router Agent]
-            RouterNode --> AnalysisNode[2. Analysis Agent]
-            AnalysisNode --> WriterNode[3. Writer Agent]
-        end
+flowchart TD
+    User["User or Dify"] -->|"POST /agent/invoke"| API["FastAPI Agent Backend :8000"]
+    API --> Graph["LangGraph Workflow"]
+
+    subgraph Graph["LangGraph Workflow"]
+        Router["Router Agent"]
+        Analysis["Analysis Agent"]
+        Writer["Writer Agent"]
+        Router --> Analysis --> Writer
     end
-    
-    RouterNode -->|OpenAI SDK| QwenAPI[Self-hosted Qwen Model API]
-    AnalysisNode -->|OpenAI SDK| QwenAPI
-    WriterNode -->|OpenAI SDK| QwenAPI
-    
-    QwenAPI -.->|vLLM / Ollama / LMDeploy| Model[Qwen2.5-14B]
-    
-    WriterNode -->|Structured State| FastAPI
-    FastAPI -->|JSON Response| Dify
+
+    Router -->|"OpenAI-compatible chat completions"| LLM["Qwen or External LLM API"]
+    Analysis -->|"OpenAI-compatible chat completions"| LLM
+    Writer -->|"OpenAI-compatible chat completions"| LLM
+
+    LLM -->|"response text"| Graph
+    Graph -->|"answer + trace"| API
+    API -->|"JSON response"| User
+
+    UI["Streamlit Test UI :8501"] --> API
+    Worker["Optional Windows Worker :9100"] -.-> API
 ```
 
-### Component Breakdown
-1. **Dify**: Serves as the user interface and main chatbot orchestrator. Uses an **HTTP Request** node to offload agentic workflows.
-2. **FastAPI Agent Server**: Exposes the REST API endpoint and translates payloads to and from LangGraph states.
-3. **LangGraph Workflow**: Implements a typed state machine with:
-   - **Router Node**: Classifies queries into categories (`quality_analysis`, `document_qa`, `general_chat`).
-   - **Analysis Node**: Conducts domain reasoning (manufacturing expert logic, fallback QA, etc.).
-   - **Writer Node**: Formats the raw analysis into standard industrial markdown templates.
-4. **Qwen Model API**: An OpenAI-compatible API endpoint (e.g., via vLLM or Ollama) hosting Qwen-series models.
+## Repository Layout
 
----
+```text
+app/
+  main.py                  FastAPI app and API endpoints
+  config.py                Environment settings
+  qwen_client.py           OpenAI-compatible LLM client
+  graph/                   LangGraph state, nodes, workflow
+  prompts/                 Router, analysis, and writer prompts
+  tools/                   Optional worker client
 
-## 2. Prerequisites & Qwen Model Serving
+qwen_server_transformers/  Local Transformers Qwen API server
+qwen_server/               vLLM-oriented Qwen helper scripts
+web_ui/                    Streamlit test UI
+windows_worker/            Optional sandboxed Windows worker service
+scripts/                   API test scripts and curl examples
+docs/                      Additional guides
+```
 
-Before starting the FastAPI backend, you must host your Qwen model. Make sure it is exposed via an OpenAI-compatible endpoint.
+## Prerequisites
 
-### Options to Serve Qwen locally (RTX 4090 24GB recommended)
+- Python 3.10+.
+- For local Qwen: an NVIDIA GPU with working CUDA/PyTorch.
+- Local model files for the default setup:
+  - `/data/models/Qwen2.5-7B-Instruct`
+  - The directory must contain `config.json`.
+- Optional: Dify if you want to call this backend from a Dify HTTP Request node.
 
-#### Option A: Transformers direct loading (Recommended Fallback / Stable)
-For environments where vLLM causes driver or torch mismatches, you can serve `Qwen2.5-7B-Instruct` directly via PyTorch/Transformers on port `8001`.
-See [qwen_server_transformers/README.md](file:///e:/document/DeepLearning/db_ai/qwen_server_transformers/README.md) for detailed configuration.
-To run:
+## Configuration
+
+Create your runtime environment file:
+
+```bash
+cp .env.example .env
+```
+
+The default `.env.example` targets the local Transformers Qwen server:
+
+```env
+QWEN_BASE_URL=http://127.0.0.1:8001/v1
+QWEN_MODEL=qwen7b
+QWEN_API_KEY=EMPTY
+QWEN_TEMPERATURE=0.2
+QWEN_MAX_TOKENS=2048
+LLM_REQUEST_TIMEOUT_SECONDS=300
+
+QWEN_MODEL_PATH=/data/models/Qwen2.5-7B-Instruct
+QWEN_SERVED_MODEL_NAME=qwen7b
+QWEN_HOST=0.0.0.0
+QWEN_PORT=8001
+QWEN_DEVICE=cuda
+QWEN_DTYPE=auto
+QWEN_MAX_NEW_TOKENS=2048
+QWEN_TOP_P=0.8
+QWEN_REPETITION_PENALTY=1.05
+```
+
+Important timeout settings:
+
+- `LLM_REQUEST_TIMEOUT_SECONDS`: backend timeout for each model API call.
+- `AGENT_TEST_TIMEOUT_SECONDS`: optional shell variable used by `scripts/test_agent.py`.
+
+The integrated agent workflow makes three LLM calls. Local Transformers inference can take longer than 30 seconds, so the test script defaults to 120 seconds.
+
+## Installation
+
+Install backend dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+If you use the local Transformers Qwen server, also install:
+
+```bash
+pip install -r qwen_server_transformers/requirements_transformers.txt
+```
+
+If you use the Streamlit UI, also install:
+
+```bash
+pip install -r web_ui/requirements_web.txt
+```
+
+## Quick Start
+
+Use separate terminals for the model server, backend, and optional UI.
+
+### 1. Start Local Qwen
+
 ```bash
 bash qwen_server_transformers/start_qwen_transformers.sh
 ```
 
-#### Option B: vLLM (Recommended for performance)
-Run vLLM to serve the local `Qwen2.5-14B-Instruct-AWQ` model weights:
-```bash
-python -m vllm.entrypoints.openai.api_server \
-    --model data/models/Qwen2.5-14B-Instruct-AWQ \
-    --port 8001 \
-    --served-model-name qwen14b \
-    --gpu-memory-utilization 0.90 \
-    --max-model-len 4096
-```
+Expected result:
 
-#### Option C: Ollama (Recommended for simplicity)
-Download and start Ollama, then run the model:
-```bash
-ollama run qwen2.5:14b
-# This will run Ollama on http://localhost:11434 by default.
-# Update QWEN_BASE_URL to http://localhost:11434/v1 and QWEN_MODEL to qwen2.5:14b in your .env
-```
+- Model loads successfully.
+- Uvicorn listens on `http://0.0.0.0:8001`.
+- OpenAI-compatible routes are available under `/v1`.
 
----
+### 2. Test Local Qwen
 
-## 2.5 Self-hosted Qwen model server
+In a second terminal:
 
-A dedicated deployment module for the self-hosted Qwen model is available in the `qwen_server/` folder. It provides pre-configured shell scripts to perform environment checks and run vLLM via local Python or Docker.
-
-### Expected Execution Sequence
-
-The FastAPI backend and local Qwen model server are completely decoupled. The backend can run independently from Qwen (allowing you to use MiniMax or custom external APIs without launching Qwen).
-
-#### Step 1: Start the Qwen Model Server (Required for Local Qwen)
-If you use the default `local_qwen` provider, run environment diagnostics and start the model server:
-```bash
-# Verify GPU capability
-bash qwen_server/check_gpu.sh
-
-# Option A: Start Transformers Fallback server (Recommended / Active default)
-bash qwen_server_transformers/start_qwen_transformers.sh
-```
-Keep this process running. Other serving options are detailed in the `qwen_server/` folder.
-
-#### Step 2: Test Qwen API Connectivity
-Verify that the model endpoint is reachable:
 ```bash
 python qwen_server_transformers/test_transformers_qwen_api.py
 ```
 
-#### Step 3: Start the FastAPI LangGraph Backend
-Start the agent application server in a second terminal. It runs on port `8000` by default:
+This checks:
+
+- `GET /v1/models`
+- `POST /v1/chat/completions`
+
+### 3. Start the Agent Backend
+
+In another terminal:
+
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
-The backend can start even when Qwen is not running, but the default integrated test requires Qwen because `.env` uses `DEFAULT_LLM_PROVIDER=local_qwen`.
 
-#### Step 4: Test the Integrated `/agent/invoke` Flow
-Query the FastAPI backend to trigger the multi-agent reasoning graph. (Requires configured provider to be online):
+The backend exposes:
+
+- `GET /health`
+- `GET /health/llm`
+- `POST /llm/test`
+- `POST /agent/invoke`
+
+### 4. Test the Full Agent Workflow
+
 ```bash
 python scripts/test_agent.py
 ```
 
-The integrated test runs three sequential LLM calls: router, analysis, and writer. On a local Transformers Qwen server this can take longer than 30 seconds, especially for the sample quality-analysis prompt. The test script now waits 120 seconds by default. To override:
+The script calls:
+
+```text
+http://127.0.0.1:8000/agent/invoke
+```
+
+Override the client timeout if your local inference is slower:
+
 ```bash
 AGENT_TEST_TIMEOUT_SECONDS=300 python scripts/test_agent.py
 ```
 
-If you run from PowerShell:
+PowerShell:
+
 ```powershell
 $env:AGENT_TEST_TIMEOUT_SECONDS="300"
 python scripts/test_agent.py
 ```
 
-You can also override the target endpoint:
+Override the target API URL:
+
 ```bash
 AGENT_API_URL=http://127.0.0.1:8000/agent/invoke python scripts/test_agent.py
 ```
 
-#### Step 5: Test with Web UI (Optional / Interactive)
-To test using a visual web interface:
-1. Start the Web UI:
-   ```bash
-   bash web_ui/start_web_ui.sh
-   ```
-2. Open your laptop browser and navigate to:
-   ```
-   http://<SERVER_IP>:8501
-   ```
-   *(For secure access or if port 8501 is closed, use SSH port-forwarding: `ssh -L 8501:127.0.0.1:8501 user@<SERVER_IP>` and open `http://127.0.0.1:8501`)*.
+### 5. Start the Web UI
 
-#### Step 6: Start and Connect Windows Agent Worker (Optional)
-To execute safe local tools (file listings, read/write files, screenshotting, python script execution, browser URL opening) from your laptop environment:
-1. Initialize and start the worker locally on your Windows host:
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File windows_worker\start_worker.ps1
-   ```
-2. Configure your backend server's `.env` file to communicate with the worker:
-   ```ini
-   ENABLE_WINDOWS_WORKER=true
-   WINDOWS_WORKER_BASE_URL=http://127.0.0.1:9100
-   ```
-3. Read the detailed [docs/windows_worker_guide.md](file:///e:/document/DeepLearning/db_ai/docs/windows_worker_guide.md) for strict sandboxing rules, safety flag adjustments, and API information.
-
----
-
-
-## 3. Configuration
-
-### Environment Variables
-1. Copy the example environment file:
-   ```bash
-   cp .env.example .env
-   ```
-2. Open `.env` and adjust the variables based on your setup. The default settings target Option C (direct Transformers execution of `Qwen2.5-7B-Instruct`).
-
-Useful timeout settings:
-- `LLM_REQUEST_TIMEOUT_SECONDS=300`: backend timeout for each call to the OpenAI-compatible model API.
-- `AGENT_TEST_TIMEOUT_SECONDS=120`: client timeout used by `scripts/test_agent.py` if you set it in the shell environment.
-
-### Dynamic Model Provider Selection (Request Context)
-The FastAPI backend supports per-request model provider overrides via the `context` dictionary block in requests to `POST /agent/invoke`.
-If context parameters (`llm_base_url`, `llm_model`, `llm_api_key`, `llm_temperature`, `llm_max_tokens`) are sent, they override the server environment defaults for that request transaction only. This is highly useful for benchmarking the graph with external services like MiniMax (`MiniMax-M1` - default external provider), OpenAI (`gpt-4o-mini`), DeepSeek (`deepseek-chat`), or DashScope (`qwen-plus`). See [web_ui/README.md](file:///e:/document/DeepLearning/db_ai/web_ui/README.md) for JSON override schemas and examples.
-
----
-
-## 4. How to Run
-
-### Method A: Local Python Environment
-
-1. Create a virtual environment and activate it:
-   ```bash
-   python -m venv venv
-   # On Windows:
-   venv\Scripts\activate
-   # On Linux/macOS:
-   source venv/bin/activate
-   ```
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Run the FastAPI application:
-   ```bash
-   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-   ```
-
-### Method B: Docker Compose
-
-Build and launch the backend using Docker Compose:
 ```bash
-docker-compose up --build -d
-```
-The server will start on port `8000`.
-
----
-
-## 5. Testing the API
-
-Verify the server is running by triggering a test.
-
-### Option A: Testing Script (Recommended)
-Run the pre-configured Python test script:
-```bash
-python scripts/test_agent.py
+bash web_ui/start_web_ui.sh
 ```
 
-The script defaults to `http://127.0.0.1:8000/agent/invoke` and a 120-second timeout. If you see `Read timed out`, check the FastAPI logs: if the backend later prints `Workflow completed successfully` and returns `200 OK`, the model is working and only the client timeout was too short.
+Open:
 
-### Option B: curl Command
-Run a curl command from your terminal:
-```bash
-curl -X POST http://127.0.0.1:8000/agent/invoke \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "A batch of machined parts has an outer diameter deviation of +0.05mm. The machine is CNC-01, the material is 45 steel, and the cutting tool was recently replaced. Please analyze possible causes and provide troubleshooting steps.",
-    "user_id": "demo_user",
-    "context": {}
-  }'
+```text
+http://<SERVER_IP>:8501
 ```
 
----
+For private remote access, use SSH forwarding from your laptop:
 
-## 6. Integrating with Dify
+```bash
+ssh -L 8501:127.0.0.1:8501 user@<SERVER_IP>
+```
 
-To connect this backend to a Dify Application:
+Then open:
 
-### 1. In Dify Studio
-1. Create a new **Chatflow** or **Workflow** application.
-2. Add an **HTTP Request** node between your Start node and the End response node.
+```text
+http://127.0.0.1:8501
+```
 
-### 2. Configure HTTP Request Node
-* **Method**: `POST`
-* **URL**:
-  * If Dify is running in a local Docker container: `http://host.docker.internal:8000/agent/invoke`
-  * If Dify is running on another machine/VM: `http://<SERVER_IP>:8000/agent/invoke`
-* **Headers**:
-  * Key: `Content-Type`, Value: `application/json`
-* **Body Type**: `JSON`
-* **Body Key-Values**:
-  ```json
-  {
-    "query": "{{sys.query}}",
-    "user_id": "{{sys.user_id}}",
-    "context": {}
-  }
-  ```
+## API Usage
 
-### 3. Parse and Display the Response
-Bind the response from the HTTP request node in Dify to your UI. Dify will expect the following schema:
+### Health Check
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+### Invoke Agent
+
+```bash
+curl -X POST http://127.0.0.1:8000/agent/invoke -H "Content-Type: application/json" -d "{\"query\": \"A batch of machined parts has an outer diameter deviation of +0.05mm. The machine is CNC-01, the material is 45 steel, and the cutting tool was recently replaced. Please analyze possible causes and provide troubleshooting steps.\", \"user_id\": \"demo_user\", \"context\": {}}"
+```
+
+Response shape:
 
 ```json
 {
-  "answer": "Final enterprise-style analysis report...",
+  "answer": "Final structured answer...",
   "task_type": "quality_analysis",
   "agent_trace": [
     {
       "agent": "router",
       "input": "...",
       "output": "..."
-    },
-    ...
+    }
   ],
-  "need_human_review": true
+  "need_human_review": true,
+  "error": null
 }
 ```
 
-In Dify, you can output `{{http_request.body.answer}}` directly to the user as the assistant's message.
+## Dynamic LLM Provider Overrides
 
----
+You can override the model provider per request by sending values in `context`.
 
-## 7. Known Limitations of this MVP
+```json
+{
+  "query": "Explain the maintenance schedule for CNC-01.",
+  "user_id": "demo_user",
+  "context": {
+    "llm_provider": "local_qwen",
+    "llm_base_url": "http://127.0.0.1:8001/v1",
+    "llm_model": "qwen7b",
+    "llm_api_key": "EMPTY",
+    "llm_temperature": 0.2,
+    "llm_max_tokens": 2048
+  }
+}
+```
 
-- **No RAG**: Document QA currently responds with placeholder flows rather than embedding/retrieving real database documents.
-- **No Database Persistence**: Run-states exist entirely in-memory during request processing; no chat history is saved to PostgreSQL/Redis.
-- **Simple Flow**: The current graph is a linear chain. It does not contain cycles, loops, or complex conditional branches.
-- **No Authentication**: The API endpoint is open for local simplicity and lacks API key verification.
+Supported provider labels in the current backend:
 
----
+- `local_qwen`
+- `minimax`
+- `custom_openai`
 
-## 8. Next Steps for Production
+For external OpenAI-compatible providers, set `llm_base_url`, `llm_model`, and `llm_api_key` explicitly.
 
-To scale this MVP to a production enterprise deployment, consider:
-1. **Real RAG integration**: Connect Langchain/LlamaIndex vector store tools inside the `document_qa` path.
-2. **Database Persistence**: Use LangGraph's `SqliteSaver` or `PostgresSaver` checkpointing to support persistent chat memory and multi-turn conversations.
-3. **Enterprise Connectors**: Integrate tools for querying relational databases (e.g., ERP, MES systems) to get live CNC logs or part dimensions.
-4. **Human-in-the-loop (HITL)**: Utilize LangGraph interrupts when `need_human_review` is `true`, pausing the graph state until an engineer approves it via Dify or an external admin portal.
-5. **Observability**: Integrate tools like LangSmith, Langfuse, or Phoenix for trace logging and latency monitoring.
+## Dify Integration
+
+Create a Dify Chatflow or Workflow and add an HTTP Request node.
+
+HTTP Request node settings:
+
+- Method: `POST`
+- URL:
+  - Same host: `http://127.0.0.1:8000/agent/invoke`
+  - Docker Dify to host backend: `http://host.docker.internal:8000/agent/invoke`
+  - Remote server: `http://<SERVER_IP>:8000/agent/invoke`
+- Header: `Content-Type: application/json`
+- Body type: JSON
+
+Body:
+
+```json
+{
+  "query": "{{sys.query}}",
+  "user_id": "{{sys.user_id}}",
+  "context": {}
+}
+```
+
+Display the result with:
+
+```text
+{{http_request.body.answer}}
+```
+
+Recommended Dify timeout:
+
+- Use at least 120 seconds for local Qwen.
+- Use 300 seconds if the quality-analysis prompt generates long reports.
+
+## Streamlit Test UI
+
+The Streamlit UI is a debugging client for the backend.
+
+Start it with:
+
+```bash
+bash web_ui/start_web_ui.sh
+```
+
+Features:
+
+- Sends prompts to `POST /agent/invoke`.
+- Shows final answer, task type, human-review flag, and agent trace.
+- Lets you switch between local Qwen, MiniMax, and a custom OpenAI-compatible provider.
+- Includes a model connection test button.
+
+See [web_ui/README.md](web_ui/README.md) for more detail.
+
+## Local Qwen Serving Options
+
+### Transformers Server
+
+Recommended for compatibility and MVP testing:
+
+```bash
+bash qwen_server_transformers/start_qwen_transformers.sh
+```
+
+The server implements a small OpenAI-compatible API:
+
+- `GET /v1/models`
+- `POST /v1/chat/completions`
+
+See [qwen_server_transformers/README.md](qwen_server_transformers/README.md).
+
+### vLLM Server
+
+Use vLLM when you want higher throughput and your CUDA/PyTorch/vLLM stack is stable:
+
+```bash
+python -m vllm.entrypoints.openai.api_server \
+  --model data/models/Qwen2.5-14B-Instruct-AWQ \
+  --host 0.0.0.0 \
+  --port 8001 \
+  --served-model-name qwen14b \
+  --gpu-memory-utilization 0.90 \
+  --max-model-len 4096
+```
+
+Then update `.env`:
+
+```env
+QWEN_BASE_URL=http://127.0.0.1:8001/v1
+QWEN_MODEL=qwen14b
+QWEN_API_KEY=EMPTY
+```
+
+See [qwen_server/README.md](qwen_server/README.md).
+
+## Docker Compose
+
+The included compose file starts the FastAPI backend:
+
+```bash
+docker-compose up --build -d
+```
+
+By default, the Qwen server section is commented out. If you want to run vLLM through Docker Compose, edit `docker-compose.yml`, enable the `qwen-server` service, and make sure NVIDIA Container Toolkit is installed on the host.
+
+## Optional Windows Worker
+
+The Windows worker is a separate sandboxed service for local machine actions such as file reads/writes, screenshots, browser opening, and optional PowerShell execution.
+
+Start it on Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File windows_worker\start_worker.ps1
+```
+
+Enable backend proxying in `.env`:
+
+```env
+ENABLE_WINDOWS_WORKER=true
+WINDOWS_WORKER_BASE_URL=http://127.0.0.1:9100
+```
+
+Then restart the FastAPI backend.
+
+Read the full guide: [docs/windows_worker_guide.md](docs/windows_worker_guide.md).
+
+## Troubleshooting
+
+### `scripts/test_agent.py` returns `Read timed out`
+
+This usually means the client gave up before the full LangGraph workflow finished. The workflow makes three sequential LLM calls, and local Transformers inference can be slow.
+
+Fix:
+
+```bash
+AGENT_TEST_TIMEOUT_SECONDS=300 python scripts/test_agent.py
+```
+
+Also check the FastAPI logs. If you see `Workflow completed successfully`, the backend and model are working.
+
+### Qwen server starts, but `/agent/invoke` fails
+
+Check:
+
+```bash
+python qwen_server_transformers/test_transformers_qwen_api.py
+curl http://127.0.0.1:8000/health/llm
+```
+
+Make sure `.env` uses the same model name served by Qwen:
+
+```env
+QWEN_MODEL=qwen7b
+QWEN_SERVED_MODEL_NAME=qwen7b
+```
+
+### Backend cannot connect to Qwen
+
+Use `127.0.0.1` when Qwen and FastAPI run on the same machine:
+
+```env
+QWEN_BASE_URL=http://127.0.0.1:8001/v1
+```
+
+If either service runs in Docker, verify container networking and host names. Docker-to-host access may require `host.docker.internal` depending on the platform.
+
+### CUDA or model loading fails
+
+Check:
+
+- `QWEN_MODEL_PATH` points to the real local model directory.
+- `config.json` exists in the model directory.
+- PyTorch can see CUDA.
+- The installed `torch`, `transformers`, and GPU driver versions are compatible.
+
+### Web UI cannot reach backend
+
+Check the API URL shown by `web_ui/start_web_ui.sh`:
+
+```bash
+AGENT_API_URL=http://127.0.0.1:8000/agent/invoke bash web_ui/start_web_ui.sh
+```
+
+For remote access, prefer SSH forwarding instead of exposing Streamlit publicly.
+
+## Current Limitations
+
+- Document QA does not yet perform real retrieval from a vector database or document store.
+- The LangGraph workflow is currently linear: router to analysis to writer.
+- The backend has no built-in authentication.
+- No persistent chat memory or database-backed checkpointing is configured.
+- The Transformers Qwen server is intended for compatibility, not high-throughput production inference.
+
+## Production Notes
+
+Before using this in production, add:
+
+- Authentication and authorization for the FastAPI backend.
+- Proper secret storage for external provider API keys.
+- Observability with request IDs, structured logs, and trace storage.
+- Real RAG for `document_qa`.
+- LangGraph checkpointing for persistent state.
+- Rate limits and concurrency controls around local model inference.
+- A production-grade model server such as vLLM, TGI, or a managed OpenAI-compatible endpoint.
