@@ -18,182 +18,149 @@ python scripts/infer_rag_single.py --config configs/rag.yaml --final-snapshot ex
 
 
 
-In my Dify+Langgraph project, I encountered the following problem during testing: The following command failed to run on my server. Please go through all the code to help me fix the error and update readme.md:
-(cad_vlm) root@cx4090:/opt/data/private/networks/db_ai# python scripts/test_agent.py
-Sending POST request to http://localhost:8000/agent/invoke...
-Unexpected error: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=30)
+Now create the first runnable version of this project.
 
-(cad_vlm) root@cx4090:/opt/data/private/networks/db_ai# bash web_ui/start_web_ui.sh
-Loading configurations from /opt/data/private/networks/db_ai/.env
-Starting Streamlit Test Web UI on 0.0.0.0:8501
-Targeting API Endpoint: http://127.0.0.1:8000/agent/invoke
+Goal of this phase:
+Build a clean, extensible project skeleton for a provider-agnostic AI agent base. MiniMax must be the default provider, but the system must be designed so that I can later switch to other API providers or locally deployed models.
 
-However, the following command ran successfully:
-(cad_vlm) root@cx4090:/opt/data/private/networks/db_ai# bash qwen_server_transformers/start_qwen_transformers.sh
-Loading configurations from /opt/data/private/networks/db_ai/.env
-Starting Transformers Qwen API Server with configuration:
---------------------------------------------------------
-Model Path:              /data/models/Qwen2.5-7B-Instruct
-Served Model Name:       qwen7b
-Host & Port:             0.0.0.0:8001
-Device:                  cuda
-Dtype:                   auto
-Max New Tokens:          2048
-Temperature:             0.2
-Top P:                   0.8
-Repetition Penalty:      1.05
---------------------------------------------------------
-Loading Qwen model from: /data/models/Qwen2.5-7B-Instruct
-Using device: cuda, dtype: auto
-Loading weights: 100%|███████████████████████████████████████████████████████████████| 339/339 [00:03<00:00, 104.37it/s]
-Model loaded successfully!
-INFO:     Started server process [6880]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     127.0.0.1:55788 - "GET /v1/models HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55790 - "POST /v1/chat/completions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55822 - "POST /v1/chat/completions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55824 - "POST /v1/chat/completions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55858 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+Do not try to implement every MiniMax API detail in this phase. Focus on a clean architecture, runnable backend, runnable frontend, provider abstraction, LangGraph integration, and one working minimal task.
 
-(cad_vlm) root@cx4090:/opt/data/private/networks/db_ai# uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-INFO:     Will watch for changes in these directories: ['/opt/data/private/networks/db_ai']
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [7023] using StatReload
-INFO:     Started server process [7025]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-2026-05-29 02:19:32,965 [INFO] app.main: Received request from user=demo_user with query='A batch of machined parts has an outer diameter deviation of +0.05mm. The machine is CNC-01, the mat...'
-2026-05-29 02:19:32,965 [INFO] app.main: Dynamic LLM override detected: provider=local_qwen, base_url=http://127.0.0.1:8001/v1, model=qwen7b, key=EMPTY, temp=0.2, max_tokens=2048
-2026-05-29 02:19:32,971 [INFO] app.qwen_client: Calling LLM API model='qwen7b' at url='http://127.0.0.1:8001/v1' with key=EMPTY
-2026-05-29 02:19:33,295 [DEBUG] openai._base_client: Request options: {'method': 'post', 'url': '/chat/completions', 'files': None, 'idempotency_key': 'stainless-python-retry-e83ccfeb-a33e-4a29-bd19-393ca93c6b07', 'security': {'bearer_auth': True}, 'content': None, 'json_data': {'messages': [{'role': 'system', 'content': 'You are a task router for an enterprise AI Agent platform.\nYour task is to classify the user query into exactly one of the following categories:\n- quality_analysis: For queries regarding manufacturing quality issues, machining errors, part deviations, or troubleshooting equipment.\n- document_qa: For queries requesting retrieval or search of documents, standard operating procedures, manuals, or database lookups.\n- general_chat: For queries that are general conversation, greeting, coding help, general knowledge, or do not fit the above categories.\n\nOutput ONLY the category name. Do not include any explanation, intro, markdown styling, or extra characters.\nExample Output:\nquality_analysis'}, {'role': 'user', 'content': 'A batch of machined parts has an outer diameter deviation of +0.05mm. The machine is CNC-01, the material is 45 steel, and the cutting tool was recently replaced. Please analyze possible causes and provide troubleshooting steps.'}], 'model': 'qwen7b', 'max_tokens': 2048, 'temperature': 0.2}}
-2026-05-29 02:19:33,298 [DEBUG] openai._base_client: Sending HTTP Request: POST http://127.0.0.1:8001/v1/chat/completions
-2026-05-29 02:19:33,298 [DEBUG] httpcore.connection: connect_tcp.started host='127.0.0.1' port=8001 local_address=None timeout=5.0 socket_options=None
-2026-05-29 02:19:33,298 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x7f5845978a90>
-2026-05-29 02:19:33,298 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
-2026-05-29 02:19:33,299 [DEBUG] httpcore.http11: send_request_headers.complete
-2026-05-29 02:19:33,299 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
-2026-05-29 02:19:33,299 [DEBUG] httpcore.http11: send_request_body.complete
-2026-05-29 02:19:33,299 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
-2026-05-29 02:19:33,409 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Fri, 29 May 2026 02:19:33 GMT'), (b'server', b'uvicorn'), (b'content-length', b'297'), (b'content-type', b'application/json')])
-2026-05-29 02:19:33,410 [INFO] httpx: HTTP Request: POST http://127.0.0.1:8001/v1/chat/completions "HTTP/1.1 200 OK"
-2026-05-29 02:19:33,410 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
-2026-05-29 02:19:33,410 [DEBUG] httpcore.http11: receive_response_body.complete
-2026-05-29 02:19:33,410 [DEBUG] httpcore.http11: response_closed.started
-2026-05-29 02:19:33,411 [DEBUG] httpcore.http11: response_closed.complete
-2026-05-29 02:19:33,411 [DEBUG] openai._base_client: HTTP Response: POST http://127.0.0.1:8001/v1/chat/completions "200 OK" Headers({'date': 'Fri, 29 May 2026 02:19:33 GMT', 'server': 'uvicorn', 'content-length': '297', 'content-type': 'application/json'})
-2026-05-29 02:19:33,411 [DEBUG] openai._base_client: request_id: None
-2026-05-29 02:19:33,421 [INFO] app.qwen_client: Calling LLM API model='qwen7b' at url='http://127.0.0.1:8001/v1' with key=EMPTY
-2026-05-29 02:19:33,431 [DEBUG] openai._base_client: Request options: {'method': 'post', 'url': '/chat/completions', 'files': None, 'idempotency_key': 'stainless-python-retry-d03b8193-3731-483b-a7a8-d6ac23eb7c97', 'security': {'bearer_auth': True}, 'content': None, 'json_data': {'messages': [{'role': 'system', 'content': "You are an enterprise AI analysis agent specializing in manufacturing quality analysis.\nAnalyze the user's issue with a professional, practical, and conservative mindset. \nDraw upon your expertise in manufacturing processes, machining (CNC, turning, milling), fixtures, tools, wear, measurement systems, and quality control (SPC, 5Y, fishbone analysis).\n\nStructure your analysis by:\n1. Identifying potential physical/mechanical root causes (e.g. tool wear, thermal expansion, setup errors).\n2. Proposing immediate checkpoints to investigate.\n3. Suggesting measurements or data points needed to narrow down the issue.\n4. Being careful and conservative: do not claim certainty without data; highlight variables that need validation.\n5. Noting any major risks associated with the issue.\n\nPlease output your analysis clearly."}, {'role': 'user', 'content': 'A batch of machined parts has an outer diameter deviation of +0.05mm. The machine is CNC-01, the material is 45 steel, and the cutting tool was recently replaced. Please analyze possible causes and provide troubleshooting steps.'}], 'model': 'qwen7b', 'max_tokens': 2048, 'temperature': 0.2}}
-2026-05-29 02:19:33,432 [DEBUG] openai._base_client: Sending HTTP Request: POST http://127.0.0.1:8001/v1/chat/completions
-2026-05-29 02:19:33,432 [DEBUG] httpcore.connection: connect_tcp.started host='127.0.0.1' port=8001 local_address=None timeout=5.0 socket_options=None
-2026-05-29 02:19:33,432 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x7f5845990bd0>
-2026-05-29 02:19:33,432 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
-2026-05-29 02:19:33,433 [DEBUG] httpcore.http11: send_request_headers.complete
-2026-05-29 02:19:33,433 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
-2026-05-29 02:19:33,433 [DEBUG] httpcore.http11: send_request_body.complete
-2026-05-29 02:19:33,433 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
-2026-05-29 02:19:48,486 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Fri, 29 May 2026 02:19:33 GMT'), (b'server', b'uvicorn'), (b'content-length', b'3893'), (b'content-type', b'application/json')])
-2026-05-29 02:19:48,487 [INFO] httpx: HTTP Request: POST http://127.0.0.1:8001/v1/chat/completions "HTTP/1.1 200 OK"
-2026-05-29 02:19:48,487 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
-2026-05-29 02:19:48,487 [DEBUG] httpcore.http11: receive_response_body.complete
-2026-05-29 02:19:48,488 [DEBUG] httpcore.http11: response_closed.started
-2026-05-29 02:19:48,488 [DEBUG] httpcore.http11: response_closed.complete
-2026-05-29 02:19:48,488 [DEBUG] openai._base_client: HTTP Response: POST http://127.0.0.1:8001/v1/chat/completions "200 OK" Headers({'date': 'Fri, 29 May 2026 02:19:33 GMT', 'server': 'uvicorn', 'content-length': '3893', 'content-type': 'application/json'})
-2026-05-29 02:19:48,488 [DEBUG] openai._base_client: request_id: None
-2026-05-29 02:19:48,491 [INFO] app.qwen_client: Calling LLM API model='qwen7b' at url='http://127.0.0.1:8001/v1' with key=EMPTY
-2026-05-29 02:19:48,511 [DEBUG] openai._base_client: Request options: {'method': 'post', 'url': '/chat/completions', 'files': None, 'idempotency_key': 'stainless-python-retry-55ac34a1-fb6a-4aba-84fa-87eef8417265', 'security': {'bearer_auth': True}, 'content': None, 'json_data': {'messages': [{'role': 'system', 'content': 'You are an enterprise report writing agent.\nYour task is to take the raw analysis provided by the analysis agent and compile it into a structured, highly professional response.\nThe output must be tailored to a traditional manufacturing enterprise user.\n\nIf the task type is quality analysis (which focuses on machining, deviations, tools, equipment):\nYou MUST structure the report using the following markdown sections:\n### 1. Problem Summary\n(A concise explanation of the issue)\n\n### 2. Possible Causes\n(A bulleted list of potential root causes, ranked by probability)\n\n### 3. Recommended Troubleshooting Steps\n(A step-by-step actionable guide to inspect and resolve the issue)\n\n### 4. Required Additional Data\n(What measurements, logs, or observations are needed to confirm the root cause)\n\n### 5. Temporary Countermeasures\n(Immediate actions to stop producing bad parts or contain the defect)\n\n### 6. Long-term Improvement Suggestions\n(Process or system changes to prevent recurrence)\n\n### 7. Risk Notes\n(Safety, cost, or operational risks of not resolving the issue)\n\nIf the task type is general chat or document QA:\nPresent the information in a clean, professional, and well-structured format (using appropriate markdown headings and bullet points where helpful) suitable for an enterprise user, without forcing the quality-analysis-specific sections above.\n\nEnsure the language is clear, precise, and actionable. Do not add conversational fluff at the beginning or end.'}, {'role': 'user', 'content': "Task Type: quality_analysis\nOriginal Query: A batch of machined parts has an outer diameter deviation of +0.05mm. The machine is CNC-01, the material is 45 steel, and the cutting tool was recently replaced. Please analyze possible causes and provide troubleshooting steps.\n\nRaw Analysis:\n### Analysis of Outer Diameter Deviation (+0.05mm) in Machined Parts\n\n#### 1. Potential Physical/ Mechanical Root Causes\n\n**a. Tool Wear:**\n- **Possible Cause:** The new cutting tool may not be properly sharpened or may have a different geometry compared to the previous tool, leading to inconsistent cutting forces and resulting in a +0.05mm deviation.\n- **Validation Needed:** Measure the tool's edge angle and radius using a tool microscope or similar precision measuring device.\n\n**b. Thermal Expansion:**\n- **Possible Cause:** If the machine is operating at high speeds or under heavy loads, thermal expansion could cause dimensional changes in the workpiece.\n- **Validation Needed:** Monitor the machine’s temperature during operation and compare it with the ambient temperature. Use a thermal imaging camera to check for hot spots on the machine components.\n\n**c. Setup Errors:**\n- **Possible Cause:** Incorrect setup of the fixture or the workpiece could lead to misalignment, causing the outer diameter to deviate.\n- **Validation Needed:** Re-check the alignment of the workpiece and the fixture using a laser alignment tool or a coordinate measuring machine (CMM).\n\n**d. Cutting Parameters:**\n- **Possible Cause:** Changes in cutting speed, feed rate, or depth of cut might affect the final dimensions.\n- **Validation Needed:** Review the cutting parameters used for this batch and compare them with the standard settings. Conduct a trial run with the same parameters to observe the results.\n\n**e. Machine Calibration:**\n- **Possible Cause:** The machine may have drifted out of calibration over time.\n- **Validation Needed:** Perform a machine calibration check using a known good part or a gauge block. Adjust the machine settings if necessary.\n\n#### 2. Immediate Checkpoints to Investigate\n\n**a. Tool Condition:**\n- Inspect the tool for any signs of wear or damage.\n- Measure the tool’s edge angle and radius.\n\n**b. Machine Temperature:**\n- Monitor the machine’s temperature during operation.\n- Use a thermal imaging camera to identify any hot spots.\n\n**c. Workpiece Alignment:**\n- Re-check the alignment of the workpiece and the fixture.\n- Use a laser alignment tool or CMM for precise measurements.\n\n**d. Cutting Parameters:**\n- Review the cutting parameters used for this batch.\n- Conduct a trial run with the same parameters.\n\n**e. Machine Calibration:**\n- Perform a machine calibration check using a known good part or gauge block.\n\n#### 3. Measurements or Data Points Needed\n\n**a. Tool Measurement:**\n- Edge angle and radius using a tool microscope.\n\n**b. Machine Temperature:**\n- Ambient temperature and machine temperature during operation.\n\n**c. Workpiece Alignment:**\n- Laser alignment readings or CMM measurements.\n\n**d. Cutting Parameters:**\n- Cutting speed, feed rate, and depth of cut.\n\n**e. Machine Calibration:**\n- Calibration readings using a known good part or gauge block.\n\n#### 4. Major Risks Associated with the Issue\n\n**a. Quality Control Failure:**\n- The deviation could lead to non-conforming parts, resulting in rework, scrap, or customer complaints.\n\n**b. Machine Downtime:**\n- If the issue is related to machine calibration or thermal expansion, it could lead to extended downtime while adjustments are made.\n\n**c. Safety Concerns:**\n- Inaccurate measurements or misaligned setups could pose safety risks to operators.\n\nBy systematically investigating these areas, we can narrow down the root cause of the +0.05mm deviation and implement corrective actions to ensure consistent part quality."}], 'model': 'qwen7b', 'max_tokens': 2048, 'temperature': 0.2}}
-2026-05-29 02:19:48,511 [DEBUG] openai._base_client: Sending HTTP Request: POST http://127.0.0.1:8001/v1/chat/completions
-2026-05-29 02:19:48,512 [DEBUG] httpcore.connection: connect_tcp.started host='127.0.0.1' port=8001 local_address=None timeout=5.0 socket_options=None
-2026-05-29 02:19:48,512 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x7f5845993490>
-2026-05-29 02:19:48,512 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
-2026-05-29 02:19:48,512 [DEBUG] httpcore.http11: send_request_headers.complete
-2026-05-29 02:19:48,512 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
-2026-05-29 02:19:48,512 [DEBUG] httpcore.http11: send_request_body.complete
-2026-05-29 02:19:48,512 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
-2026-05-29 02:20:08,216 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Fri, 29 May 2026 02:19:33 GMT'), (b'server', b'uvicorn'), (b'content-length', b'4966'), (b'content-type', b'application/json')])
-2026-05-29 02:20:08,217 [INFO] httpx: HTTP Request: POST http://127.0.0.1:8001/v1/chat/completions "HTTP/1.1 200 OK"
-2026-05-29 02:20:08,217 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
-2026-05-29 02:20:08,218 [DEBUG] httpcore.http11: receive_response_body.complete
-2026-05-29 02:20:08,218 [DEBUG] httpcore.http11: response_closed.started
-2026-05-29 02:20:08,218 [DEBUG] httpcore.http11: response_closed.complete
-2026-05-29 02:20:08,218 [DEBUG] openai._base_client: HTTP Response: POST http://127.0.0.1:8001/v1/chat/completions "200 OK" Headers({'date': 'Fri, 29 May 2026 02:19:33 GMT', 'server': 'uvicorn', 'content-length': '4966', 'content-type': 'application/json'})
-2026-05-29 02:20:08,218 [DEBUG] openai._base_client: request_id: None
-2026-05-29 02:20:08,220 [INFO] app.main: Workflow completed successfully. task_type=quality_analysis, need_human_review=True
-INFO:     127.0.0.1:42072 - "POST /agent/invoke HTTP/1.1" 200 OK
+Tech stack:
 
-(cad_vlm) root@cx4090:/opt/data/private/networks/db_ai# python qwen_server_transformers/test_transformers_qwen_api.py
-Testing local Transformers Qwen Server at: http://127.0.0.1:8001/v1
-Testing model: qwen7b
-
-Sending GET request to http://127.0.0.1:8001/v1/models...
-Status Code: 200
-Response:
-{
-  "object": "list",
-  "data": [
-    {
-      "id": "qwen7b",
-      "object": "model",
-      "created": 1780021161,
-      "owned_by": "qwen"
-    }
-  ]
-}
---------------------------------------------------
-Sending POST request to http://127.0.0.1:8001/v1/chat/completions...
-Payload: {
-  "model": "qwen7b",
-  "messages": [
-    {
-      "role": "user",
-      "content": "Briefly explain what Qwen is."
-    }
-  ],
-  "temperature": 0.2,
-  "top_p": 0.8,
-  "max_tokens": 512,
-  "stream": false
-}
-Status Code: 200
-Success! Response from server:
-{
-  "id": "chatcmpl-90d61528-b8f2-4ab1-9c79-f1e44d82beb8",
-  "object": "chat.completion",
-  "created": 1780021163,
-  "model": "qwen7b",
-  "choices": [
-    {
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "Qwen is a large language model developed by Alibaba Cloud. As a sophisticated AI assistant, I am designed to provide information, answer questions, engage in conversations, and assist with various tasks while upholding a commitment to ethical and responsible AI practices."
-      },
-      "finish_reason": "stop"
-    }
-  ],
-  "usage": {
-    "prompt_tokens": 37,
-    "completion_tokens": 50,
-    "total_tokens": 87
-  }
-}
+* Backend: Python 3.11+, FastAPI, Pydantic, LangGraph
+* Frontend: React + Vite + TypeScript
+* Configuration: `.env`
+* Default provider: MiniMax
+* Optional provider: OpenAI-compatible API
+* The backend must start even if API keys are missing.
 
 
-此外我的web应用需要兼容输入和输出图片
-将默认的 api 参数改为 MiniMax-M2.7-highspeed，api key我自己输入
+Backend requirements:
+
+1. Create a `BaseModelProvider` abstract class with at least:
+
+   * `provider_name`
+   * `is_available()`
+   * `chat(request)`
+   * placeholder methods for image, image-to-image, video, speech, music, and file tasks.
+
+2. Create `MiniMaxProvider`.
+
+   * It should read configuration from environment variables.
+   * It should be the default provider.
+   * If `MINIMAX_API_KEY` is missing, it should be disabled gracefully.
+   * Do not crash the backend when the key is missing.
+   * For this phase, implement at least the `chat` method.
+   * If the exact MiniMax chat API details are uncertain, isolate the code clearly and add TODO comments instead of inventing fake parameters.
+
+3. Create `OpenAICompatibleProvider`.
+
+   * It should read:
+
+     * `OPENAI_COMPATIBLE_BASE_URL`
+     * `OPENAI_COMPATIBLE_API_KEY`
+     * `OPENAI_COMPATIBLE_MODEL`
+   * It should be optional.
+   * It should not be the default provider.
+
+4. Create a provider registry.
+
+   * It should list available providers.
+   * It should return the selected provider.
+   * It should fall back safely if a provider is unavailable.
+
+5. Create FastAPI endpoints:
+
+   * `GET /api/health`
+   * `GET /api/providers`
+   * `POST /api/chat`
+   * `POST /api/agent/run`
+
+6. Create a simple LangGraph workflow.
+
+   * It should accept a user message.
+   * It should select the provider.
+   * It should call the provider’s `chat` method.
+   * It should return a structured trace.
+
+7. Use a consistent response format:
+
+   ```json
+   {
+     "success": true,
+     "provider": "minimax",
+     "task_type": "chat",
+     "data": {},
+     "trace": [],
+     "error": null
+   }
+   ```
+
+Frontend requirements:
+
+1. Create a simple React/Vite frontend.
+2. Add a Settings page that displays available providers.
+3. Add a Chat page.
+4. The user should be able to:
+
+   * select a provider
+   * enter a message
+   * send it to `/api/chat` or `/api/agent/run`
+   * see the response
+   * see the trace
+   * see errors clearly
+5. The frontend must not expose or request API keys.
+
+Documentation requirements:
+
+1. Add `README.md` with setup instructions:
+
+   * install backend dependencies
+   * run backend
+   * install frontend dependencies
+   * run frontend
+   * configure `.env`
+
+2. Add `docs/architecture.md`.
+
+   * Explain provider abstraction.
+   * Explain why MiniMax is only one provider adapter.
+   * Explain how LangGraph calls providers.
+
+3. Add `docs/provider_adapter_guide.md`.
+
+   * Explain how to add a new provider.
+
+4. Add `docs/dify_http_node_examples.md`.
+
+   * Provide example requests for Dify HTTP Request nodes calling:
+
+     * `/api/chat`
+     * `/api/agent/run`
+
+Testing requirements:
+
+1. Add minimal backend tests.
+2. Test that the app starts when API keys are missing.
+3. Test provider registry behavior.
+4. Test `/api/health`.
+
+Important constraints:
+
+* Do not implement unrestricted shell execution.
+* Do not implement local file modification yet.
+* Do not implement all MiniMax multimodal APIs yet.
+* Keep this phase small, clean, and runnable.
+* Prefer architecture quality over feature completeness.
+* After implementation, give me:
+
+  1. summary of created files
+  2. how to run backend
+  3. how to run frontend
+  4. what is implemented
+  5. what remains TODO
 
 
-
-my web application needs to be compatible with both input and output images. change the default API parameters to MiniMax-M2.7-highspeed, remove the Custom OpenAI-compatible API.
-
-
-我的web应用在上传图片时，QWen报错：INFO:     127.0.0.1:42160 - "POST /v1/chat/completions HTTP/1.1" 422 Unprocessable Entity。此外在使用minimax api时，出现的回复里说未看到图片上传，检查我的代码，看是哪出了问题？我的web应用需要支持图片、文本输入，同时支持图片、文本输出（如果模型或api支持图片输出，且有图片输出时需要支持输出图片）
-
-
-
-My web application is throwing a QWen error when uploading images: INFO: 127.0.0.1:42160 - "POST /v1/chat/completions HTTP/1.1" 422 Unprocessable Entity. Additionally, when using the Minimax API, the response says that no image upload is seen. Please check my code to see where the problem is and fix the bug. My web application needs to support image and text input, and also support image and text output (if the model or API supports image output, and image output is available, it needs to support image output).
 
 
 

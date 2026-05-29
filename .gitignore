@@ -150,7 +150,7 @@ activemq-data/
 *.sage.py
 
 # Environments
-# .env
+.env
 .envrc
 .venv
 env/
@@ -218,3 +218,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node/React Frontend
+node_modules/
+dist/
+.eslintcache
+
+# Local File Agent Sandbox & Backups
+workspace/
+.agent_backups/
+
+# Local Environment Variables Configuration
+.env
