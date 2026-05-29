@@ -221,7 +221,8 @@ elif llm_provider == "MiniMax API":
     )
     llm_base_url = st.sidebar.text_input("API Base URL Override", value="https://api.minimax.io/v1")
     llm_model = st.sidebar.text_input("Model Name Override", value="MiniMax-M2.7-highspeed")
-    llm_api_key = st.sidebar.text_input("API Key (Password Field)", type="password", placeholder="Paste MiniMax API key here")
+    default_key = os.getenv("MINIMAX_API_KEY", "")
+    llm_api_key = st.sidebar.text_input("API Key (Password Field)", type="password", value=default_key, placeholder="Paste MiniMax API key here")
     temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.5, value=0.2, step=0.1)
     max_tokens = st.sidebar.number_input("Max Output Tokens", min_value=1, max_value=8192, value=2048)
     
@@ -240,9 +241,14 @@ if llm_provider == "Local Qwen":
         help="Enable only when your local endpoint serves a Qwen-VL or other vision-capable model."
     )
 elif llm_provider == "MiniMax API":
-    st.sidebar.info(
-        "MiniMax text chat models do not currently accept image/audio inputs via the OpenAI-compatible chat endpoint. "
-        "Uploaded images can still be used as references for MiniMax image generation."
+    llm_supports_vision = any(
+        marker in llm_model.lower()
+        for marker in ("vl", "vision", "multimodal", "minimax-01")
+    )
+    llm_supports_vision = st.sidebar.checkbox(
+        "MiniMax model supports image understanding",
+        value=llm_supports_vision,
+        help="Enable if the selected MiniMax model (e.g. MiniMax-VL-01) supports image understanding."
     )
 
 st.sidebar.markdown("---")
@@ -253,7 +259,10 @@ image_generation_model = "image-01"
 output_image_aspect_ratio = "1:1"
 output_image_count = 1
 
-if llm_provider == "MiniMax API":
+minimax_api_key_env = os.getenv("MINIMAX_API_KEY", "")
+show_image_output = (llm_provider == "MiniMax API") or bool(minimax_api_key_env)
+
+if show_image_output:
     enable_image_output = st.sidebar.checkbox(
         "Enable MiniMax image output",
         value=False,
@@ -273,6 +282,7 @@ if llm_provider == "MiniMax API":
             index=0
         )
         output_image_count = st.sidebar.number_input("Image Count", min_value=1, max_value=9, value=1)
+
 
 # Test Selected Model Button
 if st.sidebar.button("🔌 Test Selected Model Connection", use_container_width=True):

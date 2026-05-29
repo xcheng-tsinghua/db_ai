@@ -186,8 +186,7 @@ async def invoke_agent(request: AgentRequest):
         if llm_provider == "local_qwen":
             llm_api_key = settings.QWEN_API_KEY
         elif llm_provider == "minimax":
-            # Will be validated below
-            llm_api_key = None
+            llm_api_key = settings.MINIMAX_API_KEY
         else:
             llm_api_key = settings.QWEN_API_KEY
 
@@ -265,11 +264,15 @@ async def invoke_agent(request: AgentRequest):
         output_images = list(result.get("output_images", []))
 
         if wants_image_output(request.query, resolved_context):
-            if llm_provider == "minimax":
+            minimax_key = llm_api_key if llm_provider == "minimax" else settings.MINIMAX_API_KEY
+            if not minimax_key and settings.MINIMAX_API_KEY:
+                minimax_key = settings.MINIMAX_API_KEY
+
+            if minimax_key:
                 try:
                     output_images.extend(
                         generate_minimax_images(
-                            api_key=llm_api_key,
+                            api_key=minimax_key,
                             prompt=resolved_context.get("output_image_prompt") or request.query,
                             input_images=normalize_input_images(resolved_context),
                             model=resolved_context.get("image_generation_model") or settings.MINIMAX_IMAGE_MODEL,
@@ -284,7 +287,7 @@ async def invoke_agent(request: AgentRequest):
                     warnings.append(f"Image generation failed: {image_error}")
             else:
                 warnings.append(
-                    "Image output was requested, but the selected provider does not have a configured image generation API."
+                    "Image output was requested, but no MiniMax API key is configured or available."
                 )
             
         response = AgentResponse(

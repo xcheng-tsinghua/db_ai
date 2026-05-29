@@ -74,14 +74,11 @@ def provider_supports_vision(
     model_name = (model or "").lower()
     combined = f"{provider_name} {model_name}"
 
-    # MiniMax's OpenAI-compatible text endpoint currently rejects image/audio
-    # inputs; its image capabilities live behind a separate image_generation API.
-    if provider_name == "minimax":
-        return False
-
     vision_markers = (
         "vl",
         "vision",
+        "multimodal",
+        "minimax-01",
         "gpt-4o",
         "gpt-4.1",
         "o3",
@@ -92,6 +89,7 @@ def provider_supports_vision(
         "claude-opus",
     )
     return any(marker in combined for marker in vision_markers)
+
 
 
 def build_user_content_for_model(

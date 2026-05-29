@@ -114,7 +114,8 @@ except Exception as e:
 # Pydantic Schemas
 class ChatMessage(BaseModel):
     role: str
-    content: Union[str, List[Dict[str, Any]]]
+    content: Optional[Union[str, List[Dict[str, Any]]]] = None
+
 
 class ChatCompletionRequest(BaseModel):
     model: str
