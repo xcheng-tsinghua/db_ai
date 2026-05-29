@@ -179,7 +179,7 @@ def _content_to_text(content: Union[str, List[Dict[str, Any]]]) -> str:
             continue
         if part.get("type") == "text":
             text_parts.append(str(part.get("text", "")))
-        elif part.get("type") in {"image", "image_url", "input_image"}:
+        elif part.get("type") in {"image", "image_url"}:
             image_count += 1
 
     if image_count:
@@ -218,12 +218,8 @@ def _to_qwen_vl_messages(messages: List[ChatMessage]) -> list[dict[str, Any]]:
                 continue
             if part.get("type") == "text":
                 blocks.append({"type": "text", "text": str(part.get("text", ""))})
-            elif part.get("type") in {"image_url", "input_image"}:
-                image_field = part.get("image_url")
-                if isinstance(image_field, dict):
-                    image_url = image_field.get("url")
-                else:
-                    image_url = image_field or part.get("url")
+            elif part.get("type") == "image_url":
+                image_url = part.get("image_url", {}).get("url")
                 if image_url:
                     blocks.append({"type": "image", "image": _decode_data_url(image_url)})
             elif part.get("type") == "image":

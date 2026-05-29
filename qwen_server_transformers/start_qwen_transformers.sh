@@ -22,7 +22,6 @@ QWEN_HOST=${QWEN_HOST:-"127.0.0.1"}
 QWEN_PORT=${QWEN_PORT:-8001}
 QWEN_DEVICE=${QWEN_DEVICE:-"cuda"}
 QWEN_DTYPE=${QWEN_DTYPE:-"auto"}
-QWEN_ENABLE_VISION=${QWEN_ENABLE_VISION:-"auto"}
 QWEN_MAX_NEW_TOKENS=${QWEN_MAX_NEW_TOKENS:-2048}
 QWEN_TEMPERATURE=${QWEN_TEMPERATURE:-0.2}
 QWEN_TOP_P=${QWEN_TOP_P:-0.8}
@@ -54,7 +53,6 @@ echo "Served Model Name:       $QWEN_SERVED_MODEL_NAME"
 echo "Host & Port:             $QWEN_HOST:$QWEN_PORT"
 echo "Device:                  $QWEN_DEVICE"
 echo "Dtype:                   $QWEN_DTYPE"
-echo "Vision Mode:             $QWEN_ENABLE_VISION"
 echo "Max New Tokens:          $QWEN_MAX_NEW_TOKENS"
 echo "Temperature:             $QWEN_TEMPERATURE"
 echo "Top P:                   $QWEN_TOP_P"
@@ -68,7 +66,6 @@ export QWEN_HOST
 export QWEN_PORT
 export QWEN_DEVICE
 export QWEN_DTYPE
-export QWEN_ENABLE_VISION
 export QWEN_MAX_NEW_TOKENS
 export QWEN_TEMPERATURE
 export QWEN_TOP_P

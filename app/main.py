@@ -308,7 +308,7 @@ async def invoke_agent(request: AgentRequest):
         
         # Formulate structured response error
         if llm_provider == "local_qwen":
-            error_msg = f"Local Qwen server call failed at {llm_base_url}. Details: {str(e)}"
+            error_msg = f"Local Qwen server is not reachable at {llm_base_url}. Please start Qwen server or choose another model provider."
         else:
             error_msg = f"Model provider '{llm_provider}' is not reachable at {llm_base_url}. Details: {str(e)}"
             
