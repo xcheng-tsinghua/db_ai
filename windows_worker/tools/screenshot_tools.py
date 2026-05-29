@@ -26,9 +26,17 @@ def take_screenshot(relative_path: str = "screenshot.png"):
     # Save the screenshot
     screenshot.save(target_path)
     
+    # Encode to base64
+    import base64
+    from io import BytesIO
+    buffered = BytesIO()
+    screenshot.save(buffered, format="PNG")
+    img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    
     return {
         "path": str(target_path),
         "width": screenshot.width,
         "height": screenshot.height,
-        "format": screenshot.format or "PNG"
+        "format": screenshot.format or "PNG",
+        "image_base64": img_base64
     }

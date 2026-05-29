@@ -196,7 +196,7 @@ st.sidebar.markdown("### 🤖 Model Provider Override")
 
 llm_provider = st.sidebar.radio(
     "Select Provider",
-    options=["Local Qwen", "MiniMax API", "Custom OpenAI-compatible API"],
+    options=["Local Qwen", "MiniMax API"],
     index=0
 )
 
@@ -219,29 +219,13 @@ elif llm_provider == "MiniMax API":
         "Do not expose this Web UI publicly without authentication."
     )
     llm_base_url = st.sidebar.text_input("API Base URL Override", value="https://api.minimax.chat/v1")
-    llm_model = st.sidebar.text_input("Model Name Override", value="MiniMax-M1")
+    llm_model = st.sidebar.text_input("Model Name Override", value="MiniMax-M2.7-highspeed")
     llm_api_key = st.sidebar.text_input("API Key (Password Field)", type="password", placeholder="Paste MiniMax API key here")
     temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.5, value=0.2, step=0.1)
     max_tokens = st.sidebar.number_input("Max Output Tokens", min_value=1, max_value=8192, value=2048)
     
     masked_key = llm_api_key[:4] + "..." if len(llm_api_key) > 4 else "..." if llm_api_key else "None"
     st.sidebar.markdown("**Provider**: `MiniMax API`")
-    st.sidebar.markdown(f"**Base URL**: `{llm_base_url}`")
-    st.sidebar.markdown(f"**Model**: `{llm_model}`")
-    st.sidebar.markdown(f"**API Key**: `{masked_key}`")
-else:
-    st.sidebar.warning(
-        "⚠️ Custom API credentials are sent in-memory for this request only. "
-        "Do not expose this Web UI publicly without authentication."
-    )
-    llm_base_url = st.sidebar.text_input("API Base URL Override", value="https://api.openai.com/v1")
-    llm_model = st.sidebar.text_input("Model Name Override", value="gpt-4o-mini")
-    llm_api_key = st.sidebar.text_input("API Key (Password Field)", type="password", placeholder="sk-...")
-    temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.5, value=0.2, step=0.1)
-    max_tokens = st.sidebar.number_input("Max Output Tokens", min_value=1, max_value=8192, value=2048)
-    
-    masked_key = llm_api_key[:4] + "..." if len(llm_api_key) > 4 else "..." if llm_api_key else "None"
-    st.sidebar.markdown("**Provider**: `Custom API`")
     st.sidebar.markdown(f"**Base URL**: `{llm_base_url}`")
     st.sidebar.markdown(f"**Model**: `{llm_model}`")
     st.sidebar.markdown(f"**API Key**: `{masked_key}`")
@@ -392,7 +376,20 @@ with st.sidebar.expander("🖥️ Windows Worker Test", expanded=False):
                     res_json = exec_res.json()
                     if res_json.get("success"):
                         st.success("Tool execution successful!")
-                        st.json(res_json.get("result"))
+                        result_data = res_json.get("result")
+                        st.json(result_data)
+                        
+                        # Render inline screenshot if output contains base64 image data
+                        if isinstance(result_data, dict) and "image_base64" in result_data:
+                            try:
+                                import base64
+                                st.image(
+                                    base64.b64decode(result_data["image_base64"]),
+                                    caption=f"Captured Screenshot ({result_data.get('width')}x{result_data.get('height')})",
+                                    use_container_width=True
+                                )
+                            except Exception as img_err:
+                                st.error(f"Failed to render screenshot image: {img_err}")
                     else:
                         st.error(f"Execution failed: {res_json.get('error')}")
                 else:
@@ -436,6 +433,22 @@ with col_input:
             height=200
         )
         
+        # File Uploader for Multimodal Input Image
+        uploaded_file = st.file_uploader(
+            "Upload Input Image (Optional for Vision analysis)",
+            type=["png", "jpg", "jpeg", "webp"],
+            key="vision_input_image"
+        )
+        
+        image_base64 = None
+        image_mime_type = None
+        if uploaded_file is not None:
+            import base64
+            bytes_data = uploaded_file.getvalue()
+            image_base64 = base64.b64encode(bytes_data).decode("utf-8")
+            image_mime_type = uploaded_file.type
+            st.image(uploaded_file, caption="Input Image Preview", width=300)
+            
         user_id = st.text_input("User ID", value="web_demo_user")
         
         submit_btn = st.form_submit_button("🚀 Invoke Agent Workflow", use_container_width=True)
@@ -445,24 +458,29 @@ if submit_btn:
     if not query.strip():
         with col_output:
             st.warning("Please enter a query prompt before submitting.")
-    elif llm_provider in ["MiniMax API", "Custom OpenAI-compatible API"] and not llm_api_key:
+    elif llm_provider in ["MiniMax API"] and not llm_api_key:
         with col_output:
             st.error("Error: Please enter an API key in the sidebar configuration to call the external LLM provider.")
     else:
         with col_output:
             # Spinner loader
             with st.spinner("Invoking LangGraph Workflow... Calling local/custom LLM..."):
+                context_payload = {
+                    "llm_provider": "local_qwen" if llm_provider == "Local Qwen" else "minimax",
+                    "llm_base_url": llm_base_url,
+                    "llm_model": llm_model,
+                    "llm_api_key": llm_api_key,
+                    "llm_temperature": temperature,
+                    "llm_max_tokens": max_tokens
+                }
+                if image_base64:
+                    context_payload["image_base64"] = image_base64
+                    context_payload["image_mime_type"] = image_mime_type
+                    
                 payload = {
                     "query": query,
                     "user_id": user_id,
-                    "context": {
-                        "llm_provider": "local_qwen" if llm_provider == "Local Qwen" else "minimax" if llm_provider == "MiniMax API" else "custom_openai",
-                        "llm_base_url": llm_base_url,
-                        "llm_model": llm_model,
-                        "llm_api_key": llm_api_key,
-                        "llm_temperature": temperature,
-                        "llm_max_tokens": max_tokens
-                    }
+                    "context": context_payload
                 }
                 
                 try:

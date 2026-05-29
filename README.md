@@ -283,9 +283,6 @@ Supported provider labels in the current backend:
 
 - `local_qwen`
 - `minimax`
-- `custom_openai`
-
-For external OpenAI-compatible providers, set `llm_base_url`, `llm_model`, and `llm_api_key` explicitly.
 
 ## Dify Integration
 
@@ -336,7 +333,9 @@ Features:
 
 - Sends prompts to `POST /agent/invoke`.
 - Shows final answer, task type, human-review flag, and agent trace.
-- Lets you switch between local Qwen, MiniMax, and a custom OpenAI-compatible provider.
+- Lets you switch between local Qwen and MiniMax (default multimodal `MiniMax-M2.7-highspeed`).
+- Supports uploading input images for vision analysis.
+- Supports inline rendering of output images (such as worker screenshots).
 - Includes a model connection test button.
 
 See [web_ui/README.md](web_ui/README.md) for more detail.

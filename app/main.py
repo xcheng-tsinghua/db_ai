@@ -176,7 +176,7 @@ async def invoke_agent(request: AgentRequest):
         if llm_provider == "local_qwen":
             llm_model = settings.QWEN_MODEL
         elif llm_provider == "minimax":
-            llm_model = "MiniMax-M1"
+            llm_model = "MiniMax-M2.7-highspeed"
         else:
             llm_model = settings.QWEN_MODEL
             

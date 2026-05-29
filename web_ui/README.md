@@ -73,25 +73,20 @@ This is the default local option. No API key is required.
 * **Model Name**: `qwen7b`
 
 ### Option 2: MiniMax API (Default External Provider)
-This is the default option for external API calls.
+This is the default option for external API calls, which is multimodal-enabled.
 * **Base URL**: `https://api.minimax.chat/v1`
-* **Model Name**: `MiniMax-M1`
+* **Model Name**: `MiniMax-M2.7-highspeed`
 * **API Key**: Enter your MiniMax API key in the password field.
 
-### Option 3: Custom OpenAI-compatible API
-Use this for other external providers:
-1. **OpenAI API**:
-   * **API Base URL**: `https://api.openai.com/v1`
-   * **Model Name**: `gpt-4o-mini`
-   * **API Key**: `sk-...` (Input is protected via password text field)
-2. **DeepSeek API**:
-   * **API Base URL**: `https://api.deepseek.com/v1`
-   * **Model Name**: `deepseek-chat`
-   * **API Key**: `sk-...`
-3. **DashScope/Qwen API**:
-   * **API Base URL**: `https://dashscope.aliyuncs.com/compatible-mode/v1`
-   * **Model Name**: `qwen-plus`
-   * **API Key**: `sk-...`
+---
+
+## 4.5 Image Processing Compatibility (Multimodal)
+
+The web application is compatible with both input and output images:
+1. **Input Images**: You can upload an image (PNG, JPG, JPEG, or WEBP) alongside your query in the prompt area. The image is base64-serialized and forwarded to the backend for multimodal processing (e.g. diagnosing visual defects in parts).
+2. **Output Images**: When executing local tools such as `take_screenshot` in the Windows Worker Test panel, the captured screen is returned as base64 data and displayed inline directly within your Web UI.
+
+---
 
 Click **"Test Selected Model Connection"** in the sidebar to verify your configurations.
 

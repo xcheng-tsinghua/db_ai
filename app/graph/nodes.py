@@ -60,9 +60,21 @@ def analysis_node(state: AgentState) -> Dict[str, Any]:
     
     system_prompt = ANALYSIS_SYSTEM_PROMPT_MAP.get(task_type, ANALYSIS_SYSTEM_PROMPT_MAP["general_chat"])
     
+    context_dict = state.get("context", {}) or {}
+    image_base64 = context_dict.get("image_base64")
+    
+    if image_base64:
+        mime_type = context_dict.get("image_mime_type", "image/jpeg")
+        user_content = [
+            {"type": "text", "text": query},
+            {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{image_base64}"}}
+        ]
+    else:
+        user_content = query
+        
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": query}
+        {"role": "user", "content": user_content}
     ]
     
     output = qwen_client.chat_completion(messages, **_get_llm_kwargs(state))
