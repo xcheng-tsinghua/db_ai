@@ -574,7 +574,7 @@ export default function App() {
       {/* Sidebar Navigation */}
       <aside className="sidebar">
         <div className="brand">
-          <Sparkles size={24} />
+          <img src="/logo_icon.png" alt="Logo" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid hsl(var(--primary) / 0.3)' }} />
           <span>AI Agent Base</span>
         </div>
         

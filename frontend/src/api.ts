@@ -51,9 +51,11 @@ async function request<T = any>(url: string, options?: RequestInit): Promise<{ s
         error: result.detail || result.error || response.statusText
       };
     }
+    // For AgentResponses containing trace execution information, preserve the root structure
+    const isAgentResponse = result.trace !== undefined && result.task_type !== undefined;
     return {
       success: result.success !== undefined ? result.success : true,
-      data: result.data !== undefined ? result.data : result,
+      data: (result.data !== undefined && !isAgentResponse) ? result.data : result,
       error: result.error || undefined
     };
   } catch (err: any) {
