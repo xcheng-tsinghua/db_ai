@@ -1,4 +1,6 @@
+import asyncio
 import logging
+import time
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -231,7 +233,9 @@ async def invoke_agent(request: AgentRequest):
     
     try:
         # Invoke the LangGraph workflow
-        result = agent_workflow.invoke(initial_state)
+        started_at = time.perf_counter()
+        result = await asyncio.to_thread(agent_workflow.invoke, initial_state)
+        elapsed_seconds = time.perf_counter() - started_at
         
         # Build the structured trace items
         trace_items = []
@@ -250,7 +254,10 @@ async def invoke_agent(request: AgentRequest):
             error=None
         )
         
-        logger.info(f"Workflow completed successfully. task_type={response.task_type}, need_human_review={response.need_human_review}")
+        logger.info(
+            f"Workflow completed successfully in {elapsed_seconds:.2f}s. "
+            f"task_type={response.task_type}, need_human_review={response.need_human_review}"
+        )
         return response
         
     except Exception as e:

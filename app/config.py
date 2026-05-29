@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     QWEN_MODEL: str = "qwen14b"
     QWEN_TEMPERATURE: float = 0.2
     QWEN_MAX_TOKENS: int = 2048
+    LLM_REQUEST_TIMEOUT_SECONDS: float = 300.0
 
     # Default LLM Provider Settings
     DEFAULT_LLM_PROVIDER: str = "local_qwen"

@@ -13,7 +13,8 @@ class QwenClient:
         if self._default_client is None:
             self._default_client = OpenAI(
                 base_url=settings.QWEN_BASE_URL,
-                api_key=settings.QWEN_API_KEY
+                api_key=settings.QWEN_API_KEY,
+                timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS
             )
         return self._default_client
 
@@ -49,7 +50,8 @@ class QwenClient:
             if base_url is not None or api_key is not None:
                 client = OpenAI(
                     base_url=target_base_url,
-                    api_key=target_api_key
+                    api_key=target_api_key,
+                    timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS
                 )
             else:
                 client = self._get_default_client()
@@ -58,7 +60,8 @@ class QwenClient:
                 model=target_model,
                 messages=messages,
                 temperature=temp,
-                max_tokens=tokens
+                max_tokens=tokens,
+                timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS
             )
             if response.choices and len(response.choices) > 0:
                 content = response.choices[0].message.content

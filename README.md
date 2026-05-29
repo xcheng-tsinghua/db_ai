@@ -87,15 +87,8 @@ A dedicated deployment module for the self-hosted Qwen model is available in the
 
 The FastAPI backend and local Qwen model server are completely decoupled. The backend can run independently from Qwen (allowing you to use MiniMax or custom external APIs without launching Qwen).
 
-#### Step 1: Start the FastAPI LangGraph Backend (Required)
-Start the agent application server (runs on port `8000` by default):
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-*(The backend will start successfully regardless of whether Qwen is running or if API credentials are set).*
-
-#### Step 2: Start the Qwen Model Server (Optional)
-If you wish to use the **Local Qwen** option, run environment diagnostics and start the model server:
+#### Step 1: Start the Qwen Model Server (Required for Local Qwen)
+If you use the default `local_qwen` provider, run environment diagnostics and start the model server:
 ```bash
 # Verify GPU capability
 bash qwen_server/check_gpu.sh
@@ -103,21 +96,44 @@ bash qwen_server/check_gpu.sh
 # Option A: Start Transformers Fallback server (Recommended / Active default)
 bash qwen_server_transformers/start_qwen_transformers.sh
 ```
-*(Other serving options are detailed in the `qwen_server/` folder).*
+Keep this process running. Other serving options are detailed in the `qwen_server/` folder.
 
-#### Step 3: Test Qwen API Connectivity (Optional)
-If you started the Qwen model server, verify it is reachable:
+#### Step 2: Test Qwen API Connectivity
+Verify that the model endpoint is reachable:
 ```bash
 python qwen_server_transformers/test_transformers_qwen_api.py
 ```
 
-#### Step 4: Test the Integrated /agent/invoke Flow
+#### Step 3: Start the FastAPI LangGraph Backend
+Start the agent application server in a second terminal. It runs on port `8000` by default:
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+The backend can start even when Qwen is not running, but the default integrated test requires Qwen because `.env` uses `DEFAULT_LLM_PROVIDER=local_qwen`.
+
+#### Step 4: Test the Integrated `/agent/invoke` Flow
 Query the FastAPI backend to trigger the multi-agent reasoning graph. (Requires configured provider to be online):
 ```bash
 python scripts/test_agent.py
 ```
 
-#### Step 6: Test with Web UI (Optional / Interactive)
+The integrated test runs three sequential LLM calls: router, analysis, and writer. On a local Transformers Qwen server this can take longer than 30 seconds, especially for the sample quality-analysis prompt. The test script now waits 120 seconds by default. To override:
+```bash
+AGENT_TEST_TIMEOUT_SECONDS=300 python scripts/test_agent.py
+```
+
+If you run from PowerShell:
+```powershell
+$env:AGENT_TEST_TIMEOUT_SECONDS="300"
+python scripts/test_agent.py
+```
+
+You can also override the target endpoint:
+```bash
+AGENT_API_URL=http://127.0.0.1:8000/agent/invoke python scripts/test_agent.py
+```
+
+#### Step 5: Test with Web UI (Optional / Interactive)
 To test using a visual web interface:
 1. Start the Web UI:
    ```bash
@@ -129,7 +145,7 @@ To test using a visual web interface:
    ```
    *(For secure access or if port 8501 is closed, use SSH port-forwarding: `ssh -L 8501:127.0.0.1:8501 user@<SERVER_IP>` and open `http://127.0.0.1:8501`)*.
 
-#### Step 7: Start and Connect Windows Agent Worker (Optional)
+#### Step 6: Start and Connect Windows Agent Worker (Optional)
 To execute safe local tools (file listings, read/write files, screenshotting, python script execution, browser URL opening) from your laptop environment:
 1. Initialize and start the worker locally on your Windows host:
    ```powershell
@@ -153,6 +169,10 @@ To execute safe local tools (file listings, read/write files, screenshotting, py
    cp .env.example .env
    ```
 2. Open `.env` and adjust the variables based on your setup. The default settings target Option C (direct Transformers execution of `Qwen2.5-7B-Instruct`).
+
+Useful timeout settings:
+- `LLM_REQUEST_TIMEOUT_SECONDS=300`: backend timeout for each call to the OpenAI-compatible model API.
+- `AGENT_TEST_TIMEOUT_SECONDS=120`: client timeout used by `scripts/test_agent.py` if you set it in the shell environment.
 
 ### Dynamic Model Provider Selection (Request Context)
 The FastAPI backend supports per-request model provider overrides via the `context` dictionary block in requests to `POST /agent/invoke`.
@@ -201,10 +221,12 @@ Run the pre-configured Python test script:
 python scripts/test_agent.py
 ```
 
+The script defaults to `http://127.0.0.1:8000/agent/invoke` and a 120-second timeout. If you see `Read timed out`, check the FastAPI logs: if the backend later prints `Workflow completed successfully` and returns `200 OK`, the model is working and only the client timeout was too short.
+
 ### Option B: curl Command
 Run a curl command from your terminal:
 ```bash
-curl -X POST http://localhost:8000/agent/invoke \
+curl -X POST http://127.0.0.1:8000/agent/invoke \
   -H "Content-Type: application/json" \
   -d '{
     "query": "A batch of machined parts has an outer diameter deviation of +0.05mm. The machine is CNC-01, the material is 45 steel, and the cutting tool was recently replaced. Please analyze possible causes and provide troubleshooting steps.",
