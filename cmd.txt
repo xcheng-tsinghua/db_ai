@@ -51,6 +51,6 @@ git checkout qwen
 # 4. 将本地分支关联到远程分支，并推送新分支到远程仓库
 git push -u origin qwen
 
-
-
+# 5. 切换到主分支
+git checkout main
 
