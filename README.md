@@ -36,6 +36,7 @@ cp .env.example .env
 3.  Start the FastAPI application server:
     ```bash
     uvicorn backend.app.main:app --reload --port 8001
+    uvicorn backend.app.main:app --host 0.0.0.0 --port 8001 (cloud sever)
     ```
 4.  Verify the REST API interactive docs are running at: `http://localhost:8001/docs`.
 
@@ -49,6 +50,7 @@ cp .env.example .env
     cd frontend
     npm install
     npm run dev
+    npm run dev -- --host 0.0.0.0 --port 5173 (cloud sever)
     ```
 3.  Open your browser and navigate to `http://localhost:5173`.
 
