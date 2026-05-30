@@ -1,6 +1,6 @@
 ssh root@47.76.181.233
 
-cd /opt/data/private/networks/db_ai/ && conda activate cad_vlm
+cd /opt/data/private/networks/db_ai/ && conda activate db_ai
 
 
 # 查看当前状态
