@@ -34,6 +34,63 @@ export interface LocalFileItem {
   modified_time: string;
 }
 
+export interface PlanStep {
+  step_id: string;
+  title: string;
+  worker_name: string;
+  instruction: string;
+  depends_on: string[];
+  input_refs: Record<string, string>;
+  output_type: 'text' | 'image' | 'file' | 'json' | 'mixed';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'cancelled';
+}
+
+export interface ExecutionPlan {
+  title: string;
+  objective: string;
+  steps: PlanStep[];
+}
+
+export interface Artifact {
+  artifact_id: string;
+  type: 'text' | 'image' | 'file' | 'json' | 'mixed';
+  path_or_url: string;
+  source_step_id?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface StepError {
+  error_type: 'validation_error' | 'provider_error' | 'worker_error' | 'storage_error' | 'cancelled';
+  message: string;
+  details?: Record<string, any>;
+}
+
+export interface StepResult {
+  step_id: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+  output_artifact_ids: string[];
+  error?: StepError;
+  retry_count: number;
+  started_at?: string;
+  completed_at?: string;
+}
+
+export interface TaskState {
+  task_id: string;
+  user_query: string;
+  status: 'planning' | 'pending_approval' | 'executing' | 'completed' | 'failed' | 'cancelled' | 'planning_failed';
+  plan?: ExecutionPlan;
+  step_results: Record<string, StepResult>;
+  artifacts: Artifact[];
+  final_summary?: string;
+  error?: StepError;
+  created_at: string;
+  approved_at?: string;
+  started_at?: string;
+  completed_at?: string;
+  updated_at: string;
+}
+
 // Helper to make API requests
 async function request<T = any>(url: string, options?: RequestInit): Promise<{ success: boolean; data?: T; error?: string }> {
   try {
@@ -165,6 +222,47 @@ export const api = {
   async deleteRemoteFile(fileId: string) {
     return request(`/api/files/delete/${fileId}`, {
       method: 'DELETE'
+    });
+  },
+
+  // Consulting Company / Multi-Agent Tasks
+  async createTask(userQuery: string) {
+    return request<TaskState>('/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ user_query: userQuery })
+    });
+  },
+
+  async getTask(taskId: string) {
+    return request<TaskState>(`/api/tasks/${taskId}`);
+  },
+
+  async listTasks() {
+    return request<TaskState[]>('/api/tasks');
+  },
+
+  async updatePlan(taskId: string, plan: ExecutionPlan) {
+    return request<TaskState>(`/api/tasks/${taskId}/plan`, {
+      method: 'PUT',
+      body: JSON.stringify(plan)
+    });
+  },
+
+  async confirmTask(taskId: string) {
+    return request<TaskState>(`/api/tasks/${taskId}/confirm`, {
+      method: 'POST'
+    });
+  },
+
+  async cancelTask(taskId: string) {
+    return request<TaskState>(`/api/tasks/${taskId}/cancel`, {
+      method: 'POST'
+    });
+  },
+
+  async retryStep(taskId: string, stepId: string) {
+    return request<TaskState>(`/api/tasks/${taskId}/steps/${stepId}/retry`, {
+      method: 'POST'
     });
   }
 };

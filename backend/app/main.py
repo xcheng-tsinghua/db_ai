@@ -2,7 +2,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.config import settings
-from backend.app.routes import agent, media, files, settings as settings_route
+from backend.app.routes import agent, media, files, settings as settings_route, company
 
 # Setup structured logging
 logging.basicConfig(
@@ -32,6 +32,7 @@ app.include_router(agent.router, prefix="/api")
 app.include_router(media.router, prefix="/api")
 app.include_router(files.router, prefix="/api")
 app.include_router(settings_route.router, prefix="/api")
+app.include_router(company.router, prefix="/api")
 
 @app.get("/")
 async def root():

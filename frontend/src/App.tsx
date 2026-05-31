@@ -17,9 +17,11 @@ import {
   RefreshCw, 
   AlertCircle, 
   Eye, 
-  Code
+  Code,
+  Briefcase
 } from 'lucide-react';
 import { api, ChatMessage, TraceStep, ProviderInfo, LocalFileItem } from './api';
+import CompanyTab from './components/CompanyTab';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('chat');
@@ -649,6 +651,15 @@ export default function App() {
             >
               <ShieldAlert size={18} />
               <span>Local File Agent</span>
+            </button>
+          </li>
+          <li className="nav-item">
+            <button 
+              className={`nav-button ${activeTab === 'company' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('company'); setErrorMsg(null); }}
+            >
+              <Briefcase size={18} />
+              <span>Consulting Agency</span>
             </button>
           </li>
           <li className="nav-item">
@@ -1357,6 +1368,9 @@ export default function App() {
               </div>
             </div>
           )}
+
+          {/* 10. Consulting Agency Tab */}
+          {activeTab === 'company' && <CompanyTab />}
 
         </div>
       </main>
